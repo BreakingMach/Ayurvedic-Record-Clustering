@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import OverviewPage from './components/OverviewPage';
+import WorkbenchPage from './components/WorkbenchPage';
 import DataPage from './components/DataPage';
 import MethodPage from './components/MethodPage';
 import ResultsPage from './components/ResultsPage';
@@ -9,6 +10,7 @@ import { parseCsvSummary } from './utils/distanceEngine';
 
 const PAGES = [
   { id: 'overview', label: 'Overview' },
+  { id: 'workbench', label: 'Workbench' },
   { id: 'data', label: 'Data' },
   { id: 'method', label: 'Method' },
   { id: 'results', label: 'Results' },
@@ -115,8 +117,10 @@ export default function App() {
                 realData={state.payload.realData}
                 syntheticData={state.payload.syntheticData}
                 expertReview={state.payload.expertReview}
+                onNavigate={(pageId) => setActivePage(pageId)}
               />
             )}
+            {activePage === 'workbench' && <WorkbenchPage />}
             {activePage === 'data' && (
               <DataPage
                 realData={state.payload.realData}

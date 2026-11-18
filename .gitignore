@@ -26,3 +26,5 @@ results/.cache_*/
 .DS_Store
 Thumbs.db
 *.log
+test-results/
+playwright-report/

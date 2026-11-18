@@ -107,8 +107,12 @@ const uiFiles = [
   ...listFiles(path.join(REPO_ROOT, 'src', 'components'), ['.jsx']),
 ];
 
-// Allowed structural / non-result constants in JSX prose (e.g., "Top-5", "d = 0", "d = 2", "p < 0.05", "L2", "#1-#5")
-const ALLOWED_STRUCTURAL_TOKENS = new Set(['0', '1', '2', '3', '4', '5', '0.05', '1200', '29']);
+// Allowed structural / non-result constants in JSX prose (e.g., "Top-5", "d = 0", "d = 2", "p < 0.05", "L2", "#1-#5", "k=3..8", vitals validation ranges, batch limit)
+const ALLOWED_STRUCTURAL_TOKENS = new Set([
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '10',
+  '14', '15', '18', '20', '45', '50', '55', '80', '130', '220', '1000',
+  '0.05', '1200', '29'
+]);
 
 for (const file of uiFiles) {
   const rel = path.relative(REPO_ROOT, file);

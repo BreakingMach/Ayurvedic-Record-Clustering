@@ -57,3 +57,9 @@ Conservative choices logged per Rule `R7` in `docs/CONTEXT.md`.
 - **Non-Diagnostic Language (R10, R11):** Outputs derived from retrieved neighbours are named strictly "labels of nearest dataset records", never "diagnosis", "prediction", or "disease classification". All exports embed the mandatory research prototype disclaimer.
 - **No Label-Based Metric Highlighting (R12):** Exports and dashboard views present all three metrics side-by-side without selecting or defaulting to a "winner" based on label metrics. Default configurations are specified neutrally by config.
 - **Client-Side Isolation (R13):** All workbench distance computations execute locally in the client environment without transmitting user-entered trait queries across the network.
+
+## D11. Workbench Trait Categorization (Form UI Convenience Grouping)
+- **Grouping Logic:** The 29 categorical traits from the dataset are split into two sections in the Workbench case entry form:
+  * **Physical Traits (columns 0 to 14):** Body Size, Body Weight, Height, Bone Structure, Complexion, General feel of skin, Texture of Skin, Hair Color, Appearance of Hair, Shape of face, Eyes, Eyelashes, Blinking of Eyes, Cheeks, Nose.
+  * **Physiological & Lifestyle Traits (columns 15 to 28):** Teeth and gums, Lips, Nails, Appetite, Liking tastes, Metabolism Type, Climate Preference, Stress Levels, Sleep Patterns, Dietary Habits, Physical Activity Level, Water Intake, Digestion Quality, Skin Sensitivity.
+- **Scope & Disclaimer:** This two-section split is strictly an ergonomic layout grouping to simplify user navigation across 29 dropdowns; it is not an external clinical classification or diagnostic taxonomy.

@@ -6,7 +6,7 @@ function fmt(v, digits = 4) {
   return typeof v === 'number' ? v.toFixed(digits) : '—';
 }
 
-export default function OverviewPage({ realData, syntheticData, expertReview }) {
+export default function OverviewPage({ realData, syntheticData, expertReview, onNavigate }) {
   const realMeta = realData.provenance.dataset_metadata;
   const geEquiv = realData.equivalence.find(
     (e) => e.metric_a === 'gower' && e.metric_b === 'euclidean'
@@ -43,8 +43,19 @@ export default function OverviewPage({ realData, syntheticData, expertReview }) 
           {STUDY_METADATA.title}
         </h1>
 
-        <div className="inline-flex items-center rounded border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-800">
-          {expertReview.display_label}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center rounded border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-800">
+            {expertReview.display_label}
+          </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('workbench')}
+              className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 shadow-sm transition"
+            >
+              Try Similarity Workbench &rarr;
+            </button>
+          )}
         </div>
       </div>
 

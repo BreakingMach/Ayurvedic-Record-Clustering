@@ -210,7 +210,7 @@ def build_parity_fixtures() -> None:
             # Mergesort stable ranking
             order = np.argsort(D_vec, kind="mergesort")
             top10_idx = [int(i) for i in order[:10]]
-            top10_dist = [round(float(D_vec[i]), 6) for i in top10_idx]
+            top10_dist = [float(D_vec[i]) for i in top10_idx]
             q_results["metrics"][v] = {
                 "neighbor_indices": top10_idx,
                 "neighbor_distances": top10_dist,
@@ -243,7 +243,7 @@ def build_parity_fixtures() -> None:
             )[0]
             order = np.argsort(D_vec, kind="mergesort")
             top10_idx = [int(i) for i in order[:10]]
-            top10_dist = [round(float(D_vec[i]), 6) for i in top10_idx]
+            top10_dist = [float(D_vec[i]) for i in top10_idx]
             q_results["metrics"][v] = {
                 "neighbor_indices": top10_idx,
                 "neighbor_distances": top10_dist,

@@ -1,0 +1,121 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Similarity Workbench E2E', () => {
+  test.beforeEach(async ({ page }) => {
+    // Navigate to base URL and go to Workbench tab
+    await page.goto('/');
+    // Click Workbench in header nav or Overview "Try Similarity Workbench"
+    const wbNavBtn = page.getByRole('button', { name: 'Workbench' });
+    await wbNavBtn.click();
+    await expect(page.getByRole('heading', { name: 'Similarity Workbench' })).toBeVisible();
+  });
+
+  test('1. Fill form with all 29 traits, run retrieval, assert results panel renders with neighbour table', async ({
+    page,
+  }) => {
+    // Click "Load Example #1" which populates all 29 traits from dataset record 0
+    const loadExampleBtn = page.getByRole('button', { name: 'Load Example #1' });
+    await loadExampleBtn.click();
+
+    // Verify trait counter shows 29 of 29 traits entered
+    await expect(page.getByText('29 of 29')).toBeVisible();
+
+    // Click "Run Retrieval"
+    const runBtn = page.getByRole('button', { name: 'Run Retrieval' });
+    await runBtn.click();
+
+    // Assert results panel appears
+    await expect(page.getByText('Retrieved Nearest Neighbours')).toBeVisible();
+    await expect(page.getByText('Gower Distance')).toBeVisible();
+    await expect(page.getByText('Euclidean (mode-impute)')).toBeVisible();
+    await expect(page.getByText('Cosine (mode-impute)')).toBeVisible();
+
+    // Assert Rule R11 notice is visible in results
+    await expect(
+      page.getByText('Research prototype on a dataset of unverified origin. Not a diagnostic tool.')
+    ).toBeVisible();
+
+    // Assert Rule R10 compliant heading
+    await expect(
+      page.getByRole('heading', { name: /Labels of the Nearest Dataset Records/i })
+    ).toBeVisible();
+  });
+
+  test('2. Upload CSV with invalid trait level, assert specific error message is displayed', async ({
+    page,
+  }) => {
+    // Switch to Batch Mode tab
+    const batchTabBtn = page.getByRole('button', { name: 'Batch Mode (CSV)' });
+    await batchTabBtn.click();
+    await expect(page.getByText('Batch Case Retrieval')).toBeVisible();
+
+    // Create an invalid CSV in memory
+    const invalidCsv =
+      'Body Size,Body Weight,Height,Bone Structure,Complexion,General feel of skin,Texture of Skin,Hair Color,Appearance of Hair,Shape of face,Eyes,Eyelashes,Blinking of Eyes,Cheeks,Nose,Teeth and gums,Lips,Nails,Appetite,Liking tastes,Metabolism Type,Climate Preference,Stress Levels,Sleep Patterns,Dietary Habits,Physical Activity Level,Water Intake,Digestion Quality,Skin Sensitivity\n' +
+      'INVALID_BODY_SIZE_LEVEL,Moderate,Average,Medium,Fair,Smooth,Dry,Brown,Straight,Round,Big,Moderate,Moderate,Smooth,Average,White,Medium,Smooth,Slow,Sweet,moderate,moderate,low,moderate,vegetarian,sedentary,moderate,moderate,normal\n';
+
+    // Upload using file input
+    const fileChooserPromise = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Browse CSV File' }).click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles({
+      name: 'test_invalid_case.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from(invalidCsv),
+    });
+
+    // Assert specific error message is shown
+    await expect(page.getByText('CSV Validation Issues')).toBeVisible();
+    await expect(
+      page.getByText('is not a valid level. Expected one of: Large, Medium, Slim')
+    ).toBeVisible();
+  });
+
+  test('3. Run retrieval with ~50% Unknown traits, assert observed-only columns appear', async ({
+    page,
+  }) => {
+    // Reset any existing input
+    await page.getByRole('button', { name: 'Reset' }).click();
+
+    // Select ~14 traits (Physical traits section) and leave remaining 15 as Unknown
+    // Select Body Size = Large
+    const bodySizeSelect = page.locator('#trait-0');
+    await bodySizeSelect.selectOption('Large');
+
+    // Select Body Weight = Heavy
+    const bodyWeightSelect = page.locator('#trait-1');
+    await bodyWeightSelect.selectOption({ index: 1 });
+
+    // Select Height
+    const heightSelect = page.locator('#trait-2');
+    await heightSelect.selectOption({ index: 1 });
+
+    // Select Bone Structure
+    const boneSelect = page.locator('#trait-3');
+    await boneSelect.selectOption({ index: 1 });
+
+    // Select Complexion
+    const compSelect = page.locator('#trait-4');
+    await compSelect.selectOption({ index: 1 });
+
+    // Select General feel of skin
+    const skinSelect = page.locator('#trait-5');
+    await skinSelect.selectOption({ index: 1 });
+
+    // Select Texture of Skin
+    const texSelect = page.locator('#trait-6');
+    await texSelect.selectOption({ index: 1 });
+
+    // Click "Run Retrieval"
+    const runBtn = page.getByRole('button', { name: 'Run Retrieval' });
+    await runBtn.click();
+
+    // Assert results panel rendered
+    await expect(page.getByText('Retrieved Nearest Neighbours')).toBeVisible();
+
+    // Assert observed-only section appears because traits are missing
+    await expect(page.getByText('Observed-only variants')).toBeVisible();
+    await expect(page.getByText('Euclidean (observed-only)')).toBeVisible();
+    await expect(page.getByText('Cosine (observed-only)')).toBeVisible();
+  });
+});
