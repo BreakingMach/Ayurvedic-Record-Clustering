@@ -160,10 +160,10 @@ export default function DataSection() {
                     <td className="px-3 py-2 text-neutral-600">{f.modality}</td>
                     <td className="px-3 py-2 text-neutral-500">{f.sourceGroup}</td>
                     <td className="num px-3 py-2 text-[11px] text-neutral-500">{f.domain}</td>
-                    <td className="num px-3 py-2 text-right text-neutral-700">
+                    <td className="num whitespace-nowrap px-3 py-2 text-right text-neutral-700">
                       {f.rawMI.mean.toFixed(4)} ± {f.rawMI.std.toFixed(4)}
                     </td>
-                    <td className="py-2 pl-3 text-right">
+                    <td className="whitespace-nowrap py-2 pl-3 text-right">
                       <div className="inline-flex items-center gap-2.5">
                         <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-neutral-100 sm:block">
                           <div
@@ -171,7 +171,7 @@ export default function DataSection() {
                             style={{ width: `${barPct}%` }}
                           />
                         </div>
-                        <span className="num w-28 text-right text-neutral-900">
+                        <span className="num whitespace-nowrap text-right text-neutral-900">
                           {(f.cvWeight.mean * 100).toFixed(2)}% ± {(f.cvWeight.std * 100).toFixed(2)}
                         </span>
                       </div>

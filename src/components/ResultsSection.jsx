@@ -173,45 +173,45 @@ export default function ResultsSection() {
         </tr>
         {rows.map((r) => (
           <tr key={`${r.metric}-${r.weighting}`} className="hover:bg-neutral-50/70">
-            <td className="py-2.5 pl-3 pr-3 font-medium text-neutral-900">
+            <td className="whitespace-nowrap py-2.5 pl-3 pr-3 font-medium text-neutral-900">
               {METRIC_LABELS[r.metric]}
             </td>
             <td
-              className={`num px-3 py-2.5 text-right ${
+              className={`num whitespace-nowrap px-3 py-2.5 text-right ${
                 r.ari.mean === bAri ? 'font-semibold text-teal-800' : 'text-neutral-700'
               }`}
             >
               {fmtMeanStd(r.ari)}
             </td>
             <td
-              className={`num px-3 py-2.5 text-right ${
+              className={`num whitespace-nowrap px-3 py-2.5 text-right ${
                 r.nmi.mean === bNmi ? 'font-semibold text-teal-800' : 'text-neutral-700'
               }`}
             >
               {fmtMeanStd(r.nmi)}
             </td>
             <td
-              className={`num px-3 py-2.5 text-right ${
+              className={`num whitespace-nowrap px-3 py-2.5 text-right ${
                 r.macroP5.mean === bMP5 ? 'font-semibold text-teal-800' : 'text-neutral-700'
               }`}
             >
               {fmtMeanStd(r.macroP5, true)}
             </td>
             <td
-              className={`num px-3 py-2.5 text-right ${
+              className={`num whitespace-nowrap px-3 py-2.5 text-right ${
                 r.macroMAP.mean === bMMAP ? 'font-semibold text-teal-800' : 'text-neutral-700'
               }`}
             >
               {fmtMeanStd(r.macroMAP, true)}
             </td>
             <td
-              className={`num px-3 py-2.5 text-right ${
+              className={`num whitespace-nowrap px-3 py-2.5 text-right ${
                 r.microP5.mean === bMicP5 ? 'font-semibold text-teal-800' : 'text-neutral-700'
               }`}
             >
               {fmtMeanStd(r.microP5, true)}
             </td>
-            <td className="num py-2.5 pl-3 pr-3 text-right text-neutral-500">
+            <td className="num whitespace-nowrap py-2.5 pl-3 pr-3 text-right text-neutral-500">
               {fmtMeanStd(r.sil)}
             </td>
           </tr>
@@ -280,52 +280,52 @@ export default function ResultsSection() {
                 </td>
               </tr>
               <tr className="hover:bg-neutral-50/70">
-                <td className="py-2.5 pl-3 pr-3 font-medium text-neutral-800">
+                <td className="whitespace-nowrap py-2.5 pl-3 pr-3 font-medium text-neutral-800">
                   Average-Linkage Hierarchical (Gower Uniform)
                 </td>
-                <td className="num px-3 py-2.5 text-right text-neutral-700">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right text-neutral-700">
                   {fmtMeanStd(extraBaselines.avg_linkage_gower_uniform.ari)}
                 </td>
-                <td className="num px-3 py-2.5 text-right text-neutral-700">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right text-neutral-700">
                   {fmtMeanStd(extraBaselines.avg_linkage_gower_uniform.nmi)}
                 </td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
-                <td className="num py-2.5 pl-3 pr-3 text-right text-neutral-500">
+                <td className="num whitespace-nowrap py-2.5 pl-3 pr-3 text-right text-neutral-500">
                   {fmtMeanStd(extraBaselines.avg_linkage_gower_uniform.sil)}
                 </td>
               </tr>
               <tr className="hover:bg-neutral-50/70">
-                <td className="py-2.5 pl-3 pr-3 font-medium text-neutral-800">
+                <td className="whitespace-nowrap py-2.5 pl-3 pr-3 font-medium text-neutral-800">
                   k-Prototypes (Huang 1998, γ = 0.5)
                 </td>
-                <td className="num px-3 py-2.5 text-right text-neutral-700">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right text-neutral-700">
                   {fmtMeanStd(extraBaselines.k_prototypes.ari)}
                 </td>
-                <td className="num px-3 py-2.5 text-right text-neutral-700">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right text-neutral-700">
                   {fmtMeanStd(extraBaselines.k_prototypes.nmi)}
                 </td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
-                <td className="num py-2.5 pl-3 pr-3 text-right text-neutral-500">
+                <td className="num whitespace-nowrap py-2.5 pl-3 pr-3 text-right text-neutral-500">
                   {fmtMeanStd(extraBaselines.k_prototypes.sil)}
                 </td>
               </tr>
               <tr className="bg-teal-50/40">
-                <td className="py-2.5 pl-3 pr-3 font-medium text-teal-900">
+                <td className="whitespace-nowrap py-2.5 pl-3 pr-3 font-medium text-teal-900">
                   Supervised Naive Bayes Posterior Proximity (Upper Bound)
                 </td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
                 <td className="num px-3 py-2.5 text-right text-neutral-400">—</td>
-                <td className="num px-3 py-2.5 text-right font-semibold text-teal-900">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right font-semibold text-teal-900">
                   {fmtMeanStd(extraBaselines.supervised_upper.macroP5, true)}
                 </td>
-                <td className="num px-3 py-2.5 text-right font-semibold text-teal-900">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right font-semibold text-teal-900">
                   {fmtMeanStd(extraBaselines.supervised_upper.macroMAP, true)}
                 </td>
-                <td className="num px-3 py-2.5 text-right font-semibold text-teal-900">
+                <td className="num whitespace-nowrap px-3 py-2.5 text-right font-semibold text-teal-900">
                   {fmtMeanStd(extraBaselines.supervised_upper.microP5, true)}
                 </td>
                 <td className="num py-2.5 pl-3 pr-3 text-right text-neutral-400">—</td>
