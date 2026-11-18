@@ -1,0 +1,7 @@
+metric_a,metric_b,spearman_rho,max_abs_diff_minmax,mean_top5_overlap
+gower,euclidean,1.0,0.24992437409568988,1.0
+gower,cosine,1.0,3.3306690738754696e-16,1.0
+gower,hamming,1.0,0.0,1.0
+euclidean,cosine,1.0,0.24992437409569004,1.0
+euclidean,hamming,1.0,0.24992437409568988,1.0
+cosine,hamming,1.0,3.3306690738754696e-16,1.0

@@ -25,3 +25,7 @@ Conservative choices logged per Rule `R7` in `docs/CONTEXT.md`.
 
 ## D5. Paired Effect Size & Zero-Difference Handling (`stats.py`)
 - **Decision:** Report both Cohen's $d_z = \bar{\Delta} / s_\Delta$ and matched-pairs rank-biserial correlation $r_{rb} = (W_+ - W_-) / (W_+ + W_-)$ alongside two-sided paired Wilcoxon signed-rank tests with step-down Holm–Bonferroni correction. When two metrics produce identical scores across all paired folds/seeds ($\Delta_i = 0\ \forall i$), Wilcoxon returns `stat = 0.0`, `p_raw = 1.0`, `cohen_dz = 0.0`, `rank_biserial_r = 0.0` rather than raising a SciPy error.
+
+## D6. Trait-Subset Sampling at `m = 29` & Tied-Distance Metrics (`run_real.py`)
+- **Subset count at `m = 29`:** Since the real dataset has exactly `p = 29` categorical traits, there is only $\binom{29}{29} = 1$ unique 29-trait subset. For `m < 29`, `run_real.py` samples `20` distinct random trait subsets using fixed seeds (`subset_seed_base + m * 100 + s`). For `m = 29`, it evaluates the single unique full feature set (`n_subsets = 1`, `std = 0.0`) rather than repeating the identical calculation 20 times.
+- **Tied-distance reporting:** For each `(N, N)` distance matrix $D$, `tied_distance_pairs` is defined on the $\binom{N}{2} = 719{,}400$ upper-triangular pairs as `(n_pairs - n_unique_distances)` (counting exact float64 duplicates seen by `mergesort`), complemented by `top5_boundary_tie_rows` (count of rows $i$ where $d_{(5)}(i) = d_{(6)}(i)$ exactly, i.e., where top-5 retrieval depends on tie-breaking).

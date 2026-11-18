@@ -36,3 +36,24 @@ evaluation:
 stats:
   alpha: 0.05
   correction: "holm"
+
+experiment_real:
+  metrics:
+    - "gower"
+    - "euclidean"
+    - "cosine"
+  equivalence_metrics:
+    - "gower"
+    - "euclidean"
+    - "cosine"
+    - "hamming"
+  subset_sizes: [3, 5, 8, 12, 20, 29]
+  n_subsets_per_m: 20
+  subset_seed_base: 1000
+  shuffled_control_seed: 2026
+  shuffled_control_checks:
+    chance_macro_p5: 0.1666666667
+    macro_p5_tolerance: 0.04
+    knn_macro_f1_max: 0.22
+  output_dir: "results"
+  findings_doc: "docs/REAL_DATA_FINDINGS.md"
