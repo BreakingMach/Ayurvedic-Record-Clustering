@@ -1,109 +1,145 @@
 import React, { useEffect, useState } from 'react';
-import OverviewSection from './components/OverviewSection';
-import DataAuditSection from './components/DataAuditSection';
-import RealBenchmarkSection from './components/RealBenchmarkSection';
-import SyntheticBenchmarkSection from './components/SyntheticBenchmarkSection';
-import RetrievalSimulatorSection from './components/RetrievalSimulatorSection';
-import ExpertAndLimitationsSection from './components/ExpertAndLimitationsSection';
+import OverviewPage from './components/OverviewPage';
+import DataPage from './components/DataPage';
+import MethodPage from './components/MethodPage';
+import ResultsPage from './components/ResultsPage';
+import RetrievalPage from './components/RetrievalPage';
+import LimitationsPage from './components/LimitationsPage';
+import { parseCsvSummary } from './utils/distanceEngine';
 
-const SECTIONS = [
-  { id: 'overview', label: '1. Overview' },
-  { id: 'data', label: '2. Data Audit' },
-  { id: 'real-benchmark', label: '3. Real Data (Exp. A)' },
-  { id: 'synthetic-benchmark', label: '4. Synthetic (Exp. B)' },
-  { id: 'retrieval', label: '5. Retrieval' },
-  { id: 'expert-limitations', label: '6. Review & Limits' },
+const PAGES = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'data', label: 'Data' },
+  { id: 'method', label: 'Method' },
+  { id: 'results', label: 'Results' },
+  { id: 'retrieval', label: 'Retrieval' },
+  { id: 'limitations', label: 'Limitations' },
 ];
 
 export default function App() {
-  const [state, setState] = useState({ loading: true, error: null, data: null });
+  const [activePage, setActivePage] = useState('overview');
+  const [state, setState] = useState({ loading: true, error: null, payload: null });
 
   useEffect(() => {
-    let active = true;
-    async function loadAll() {
+    let mounted = true;
+    async function load() {
       try {
-        const [realData, syntheticData, expertReview, realCases, syntheticCases] =
-          await Promise.all(
-            [
-              '/data/real_data.json',
-              '/data/synthetic.json',
-              '/data/expert_review.json',
-              '/data/real_cases.json',
-              '/data/synthetic_cases_default.json',
-            ].map(async (url) => {
-              const res = await fetch(url);
-              if (!res.ok) throw new Error(`Failed to load ${url} (HTTP ${res.status})`);
-              return res.json();
-            })
-          );
-        if (active) {
+        const [realRes, synthRes, expertRes, casesRes, synthCsvRes] = await Promise.all([
+          fetch('/data/real_data.json'),
+          fetch('/data/synthetic.json'),
+          fetch('/data/expert_review.json'),
+          fetch('/data/real_cases.json'),
+          fetch('/data/synthetic_cases_default.csv'),
+        ]);
+
+        for (const res of [realRes, synthRes, expertRes, casesRes, synthCsvRes]) {
+          if (!res.ok) throw new Error(`Failed to fetch ${res.url} (HTTP ${res.status})`);
+        }
+
+        const [realData, syntheticData, expertReview, realCases, synthCsvText] = await Promise.all(
+          [
+            realRes.json(),
+            synthRes.json(),
+            expertRes.json(),
+            casesRes.json(),
+            synthCsvRes.text(),
+          ]
+        );
+
+        const synthCsvSummary = parseCsvSummary(synthCsvText);
+        if (mounted) {
           setState({
             loading: false,
             error: null,
-            data: { realData, syntheticData, expertReview, realCases, syntheticCases },
+            payload: { realData, syntheticData, expertReview, realCases, synthCsvSummary },
           });
         }
       } catch (err) {
-        if (active) setState({ loading: false, error: err.message, data: null });
+        if (mounted) setState({ loading: false, error: err.message, payload: null });
       }
     }
-    loadAll();
+    load();
     return () => {
-      active = false;
+      mounted = false;
     };
   }, []);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-neutral-900">
-      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <a href="#overview" className="text-sm font-semibold tracking-tight text-neutral-900">
+      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <span className="text-sm font-semibold tracking-tight text-neutral-900">
             Ayurvedic Distance Benchmark
-          </a>
-          <nav className="flex flex-wrap items-center gap-1 sm:gap-3">
-            {SECTIONS.map((s) => (
-              <a
-                key={s.id}
-                href={`#${s.id}`}
-                className="rounded px-2 py-1 text-xs font-medium text-neutral-600 transition hover:bg-neutral-100 hover:text-teal-800"
-              >
-                {s.label}
-              </a>
-            ))}
+          </span>
+
+          <nav className="flex flex-wrap items-center gap-1" aria-label="Primary pages">
+            {PAGES.map((p) => {
+              const active = activePage === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActivePage(p.id)}
+                  className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+                    active
+                      ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30'
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-12 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto max-w-5xl px-6 py-8">
         {state.loading && (
           <div className="paper-card p-6 text-sm text-neutral-600">
-            Loading benchmark JSON artifacts from <code className="num">/data/*.json</code>...
+            Loading verified results from <code className="num">/data/</code>...
           </div>
         )}
+
         {state.error && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-5 text-sm text-red-800">
-            Error loading benchmark JSON: {state.error}. Run{' '}
-            <code className="num">python python_benchmark/export_ui_assets.py</code> first.
+          <div className="paper-card border-red-200 p-6 text-sm text-red-700">
+            Error loading benchmark files: {state.error}. Run{' '}
+            <code className="num">python python_benchmark/export_ui_data.py</code>.
           </div>
         )}
-        {state.data && (
+
+        {state.payload && (
           <>
-            <OverviewSection
-              realData={state.data.realData}
-              syntheticData={state.data.syntheticData}
-              expertReview={state.data.expertReview}
-            />
-            <DataAuditSection
-              realData={state.data.realData}
-              realCases={state.data.realCases}
-            />
-            <RealBenchmarkSection realData={state.data.realData} />
-            <SyntheticBenchmarkSection syntheticData={state.data.syntheticData} />
-            <RetrievalSimulatorSection
-              realCases={state.data.realCases}
-              syntheticCases={state.data.syntheticCases}
-            />
-            <ExpertAndLimitationsSection expertReview={state.data.expertReview} />
+            {activePage === 'overview' && (
+              <OverviewPage
+                realData={state.payload.realData}
+                syntheticData={state.payload.syntheticData}
+                expertReview={state.payload.expertReview}
+              />
+            )}
+            {activePage === 'data' && (
+              <DataPage
+                realData={state.payload.realData}
+                realCases={state.payload.realCases}
+                synthCsvSummary={state.payload.synthCsvSummary}
+              />
+            )}
+            {activePage === 'method' && (
+              <MethodPage
+                realData={state.payload.realData}
+                syntheticData={state.payload.syntheticData}
+              />
+            )}
+            {activePage === 'results' && (
+              <ResultsPage
+                realData={state.payload.realData}
+                syntheticData={state.payload.syntheticData}
+              />
+            )}
+            {activePage === 'retrieval' && <RetrievalPage realCases={state.payload.realCases} />}
+            {activePage === 'limitations' && (
+              <LimitationsPage expertReview={state.payload.expertReview} />
+            )}
           </>
         )}
       </main>
