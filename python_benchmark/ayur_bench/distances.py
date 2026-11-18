@@ -19,6 +19,8 @@ FORBIDDEN_LABEL_NAMES = frozenset(
         "y_vaidya",
         "class",
         "prakriti",
+        "latent_class",
+        "eval_label",
     }
 )
 
