@@ -15,6 +15,7 @@ venv/
 env/
 tridosha_data/
 .pytest_cache/
+results/.cache_synthetic/
 *.egg-info/
 
 # Editor / OS
