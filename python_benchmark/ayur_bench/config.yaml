@@ -1,0 +1,38 @@
+# Central configuration for ayur_bench (R2/R3: hyperparameters set a priori, never tuned on labels)
+
+dataset:
+  zip_path: "Dataset/tridosha.zip"
+  csv_name: "Updated_Prakriti_With_Features.csv"
+  label_column: "Dosha"
+  keep_duplicates: true
+  class_order:
+    - "Vata+Pitta"
+    - "Vata"
+    - "Pitta"
+    - "Kapha"
+    - "Pitta+Kapha"
+    - "Vata+Kapha"
+
+distances:
+  missing_numeric_imputation: "median"
+  missing_categorical_imputation: "mode"
+  gower_all_missing_pair_distance: 1.0
+
+evaluation:
+  knn:
+    n_neighbors: 5
+    n_splits: 5
+    n_repeats: 3
+    random_state: 42
+  retrieval:
+    ks: [1, 5, 10]
+    tie_breaking: "mergesort"
+    smallest_n_classes: 3
+  clustering:
+    linkages:
+      - "average"
+      - "complete"
+
+stats:
+  alpha: 0.05
+  correction: "holm"

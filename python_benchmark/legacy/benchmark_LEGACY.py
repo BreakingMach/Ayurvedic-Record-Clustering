@@ -1,3 +1,20 @@
+# =============================================================================
+# LEGACY / SUPERSEDED SCRIPT — DO NOT USE FOR BENCHMARK REPORTING
+#
+# Retained for provenance only (superseded by python_benchmark/ayur_bench/).
+# Historical methodology issues documented in docs/CONTEXT.md & docs/AUDIT.md:
+#   P1 (Label leakage): Earlier iterations of this benchmark script and
+#       Notebook/Unsupervised.ipynb invented Age_Vaya, BMI, Systolic_BP, and
+#       Pulse_Nadi_Rate with np.random and shifted three of them by the label
+#       index (y*2.2, y*4.5, -y*3.5). This intermediate revision removed the
+#       direct y-shift but still injected simulated continuous covariates
+#       directly into the primary real-CSV run rather than separating real
+#       categorical-only data from explicitly labelled SYNTHETIC/SIMULATED runs.
+#   P2 (Label-based model selection): Earlier evaluate_matrix / notebook code
+#       selected between spectral clustering and complete-linkage clustering by
+#       comparing ARI against the true labels.
+# =============================================================================
+
 #!/usr/bin/env python3
 """
 Leak-Free Benchmark of Mixed-Type Distance Metrics on Ayurvedic Patient Case Records.
