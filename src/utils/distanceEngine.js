@@ -1,247 +1,170 @@
-import { CLINICAL_COHORT, PARIKSHA_OPTIONS } from '../data/clinicalCohort.js';
+import benchmarkData from '../data/realBenchmarkResults.json';
 
-export const NUMERICAL_KEYS = ['Age_Vaya', 'BMI', 'Systolic_BP', 'Pulse_Nadi_Rate'];
-export const CATEGORICAL_KEYS = Object.keys(PARIKSHA_OPTIONS);
+const NUM_COLS = ['Age_Vaya', 'BMI', 'Systolic_BP', 'Pulse_Rate'];
+const CAT_COLS = Object.keys(benchmarkData.catVocabFull);
+const ALL_COLS = [...NUM_COLS, ...CAT_COLS];
+const CORE_CAT_COLS = CAT_COLS.slice(0, 20);
+const ALPHA_DEFAULT = benchmarkData.meta.alpha; // 0.50 untuned neutral mix
 
-// Vaidya-aligned MI squared weights (Age_Vaya explicitly suppressed to 0.01 floor)
-const RAW_ENGINE_WEIGHTS = {
-  Age_Vaya: 0.01,
-  BMI: 0.479,
-  Systolic_BP: 0.170,
-  Pulse_Nadi_Rate: 0.300,
-  Nadi_Type: 0.555,
-  Agni_Grade: 0.516,
-  Koshtha: 0.428,
-  Skin_Texture: 0.398,
-  Body_Frame: 0.353,
-  Bala_Strength: 0.316,
-  Bone_Structure: 0.289,
-  Complexion: 0.265,
-  Hair_Type: 0.248,
-  Mala_Tendency: 0.146,
-  Sveda_Perspiration: 0.158,
-  Sleep_Quality: 0.182,
-  Satva_Disposition: 0.172,
-};
+const { numStatsFull, catVocabFull, miWeightsFull, uniqueProfiles } = benchmarkData;
 
-const WEIGHT_SUM = Object.values(RAW_ENGINE_WEIGHTS).reduce((a, b) => a + b, 0);
-export const NORMALIZED_WEIGHTS = Object.fromEntries(
-  Object.entries(RAW_ENGINE_WEIGHTS).map(([k, v]) => [k, v / WEIGHT_SUM])
-);
+const UNIFORM_WEIGHTS = Object.fromEntries(ALL_COLS.map((c) => [c, 1 / ALL_COLS.length]));
 
-// Precompute cohort numerical stats (min, max, range, mean, std) for exact Gower & Z-score scaling
-function computeNumericalStats(cohort) {
-  const stats = {};
-  NUMERICAL_KEYS.forEach((key) => {
-    const vals = cohort.map((p) => p[key]);
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-    const variance = vals.reduce((acc, v) => acc + (v - mean) ** 2, 0) / vals.length;
-    stats[key] = {
-      min,
-      max,
-      range: Math.max(1e-6, max - min),
-      mean,
-      std: Math.max(1e-6, Math.sqrt(variance)),
-    };
+function encodeProfile(profile, weights) {
+  const normNum = NUM_COLS.map((col) => {
+    const st = numStatsFull[col];
+    return (profile[col] - st.min) / Math.max(1e-6, st.range);
   });
-  return stats;
+
+  const zNumW = NUM_COLS.map((col) => {
+    const st = numStatsFull[col];
+    const z = (profile[col] - st.mean) / Math.max(1e-6, st.std);
+    return z * Math.sqrt(weights[col] * ALL_COLS.length);
+  });
+
+  const catOheW = [];
+  CAT_COLS.forEach((col) => {
+    const vocab = catVocabFull[col];
+    const sqrtW = Math.sqrt(weights[col] * ALL_COLS.length);
+    for (let v = 0; v < vocab.length; v++) {
+      catOheW.push(profile[col] === vocab[v] ? sqrtW : 0);
+    }
+  });
+
+  return {
+    normNum,
+    fullW: [...zNumW, ...catOheW],
+    catOheW,
+  };
 }
 
-const NUM_STATS = computeNumericalStats(CLINICAL_COHORT);
-
-// Encode patient to OHE + Z-score full vector and OHE categorical-only vector
-function encodeVectors(patient) {
-  const zNum = NUMERICAL_KEYS.map((k) => (patient[k] - NUM_STATS[k].mean) / NUM_STATS[k].std);
-  const catOhe = [];
-  CATEGORICAL_KEYS.forEach((k) => {
-    const opts = PARIKSHA_OPTIONS[k];
-    opts.forEach((opt) => {
-      catOhe.push(patient[k] === opt ? 1 : 0);
-    });
-  });
-  return { full: [...zNum, ...catOhe], catOhe };
-}
-
-function cosineDistanceVec(a, b) {
+function cosineDist(a, b) {
   let dot = 0;
-  let normA = 0;
-  let normB = 0;
+  let nA = 0;
+  let nB = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+    nA += a[i] * a[i];
+    nB += b[i] * b[i];
   }
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  if (denom < 1e-9) return 1;
-  return Math.max(0, Math.min(1, 1 - dot / denom));
+  const denom = Math.sqrt(nA * nB);
+  return denom > 1e-12 ? Math.max(0, Math.min(1, 1 - dot / denom)) : 1;
 }
 
-function euclideanDistanceVec(a, b) {
-  let sumSq = 0;
+function euclideanDist(a, b) {
+  let s = 0;
   for (let i = 0; i < a.length; i++) {
     const d = a[i] - b[i];
-    sumSq += d * d;
+    s += d * d;
   }
-  return Math.sqrt(sumSq);
+  return Math.sqrt(s);
 }
 
-// Compute exact Vaidya-Weighted Gower Distance in [0, 1]
-export function computeWeightedGower(p1, p2) {
-  let weightedSum = 0;
-  NUMERICAL_KEYS.forEach((k) => {
-    const d = Math.min(1, Math.abs(p1[k] - p2[k]) / NUM_STATS[k].range);
-    weightedSum += NORMALIZED_WEIGHTS[k] * d;
-  });
-  CATEGORICAL_KEYS.forEach((k) => {
-    const d = p1[k] === p2[k] ? 0 : 1;
-    weightedSum += NORMALIZED_WEIGHTS[k] * d;
-  });
-  return Math.max(0, Math.min(1, weightedSum));
+function pairwiseDistance(pA, encA, pB, encB, metric, weights, alpha = ALPHA_DEFAULT) {
+  if (metric === 'gower' || metric === 'hybrid') {
+    let gSum = 0;
+    let wTot = 0;
+    for (let i = 0; i < NUM_COLS.length; i++) {
+      const w = weights[NUM_COLS[i]];
+      gSum += w * Math.min(1, Math.abs(encA.normNum[i] - encB.normNum[i]));
+      wTot += w;
+    }
+    for (let i = 0; i < CAT_COLS.length; i++) {
+      const col = CAT_COLS[i];
+      const w = weights[col];
+      gSum += w * (pA[col] === pB[col] ? 0 : 1);
+      wTot += w;
+    }
+    const dGower = wTot > 0 ? gSum / wTot : 0;
+    if (metric === 'gower') return dGower;
+    const dCosCat = cosineDist(encA.catOheW, encB.catOheW);
+    return alpha * dGower + (1 - alpha) * dCosCat;
+  }
+
+  if (metric === 'euclidean') {
+    return euclideanDist(encA.fullW, encB.fullW);
+  }
+
+  if (metric === 'cosine') {
+    return cosineDist(encA.fullW, encB.fullW);
+  }
+
+  return 0;
 }
 
-// Compute all 4 SIH26008 distances between two patient records
-export function computePairwiseDistances(p1, p2, alpha = 0.75) {
-  const gower = computeWeightedGower(p1, p2);
-  const v1 = encodeVectors(p1);
-  const v2 = encodeVectors(p2);
+/**
+ * Retrieve Top-K nearest unique profiles (strictly excluding query's own groupId to prevent clone leakage)
+ * across Gower, Euclidean, Cosine, and Hybrid under either Uniform or Train-MI weighting.
+ */
+export function retrieveComparisonTable(queryProfile, weighting = 'uniform', k = 5) {
+  const weights = weighting === 'mi' ? miWeightsFull : UNIFORM_WEIGHTS;
+  const encQuery = encodeProfile(queryProfile, weights);
+  const gallery = uniqueProfiles.filter((p) => p.groupId !== queryProfile.groupId);
+  const kernels = ['gower', 'euclidean', 'cosine', 'hybrid'];
 
-  // Normalized Euclidean (normalized by theoretical max spread ~8.2 for 4 Z-vitals + 13 OHE pairs)
-  const eucRaw = euclideanDistanceVec(v1.full, v2.full);
-  const euclidean = Math.min(1, eucRaw / 8.2);
+  const encodedGallery = gallery.map((p) => ({
+    profile: p,
+    enc: encodeProfile(p, weights),
+  }));
 
-  // Full OHE+Z-score Cosine distance
-  const cosine = cosineDistanceVec(v1.full, v2.full);
+  const byKernel = {};
+  for (const kernel of kernels) {
+    const ranked = encodedGallery
+      .map(({ profile, enc }) => {
+        const d = pairwiseDistance(queryProfile, encQuery, profile, enc, kernel, weights, ALPHA_DEFAULT);
+        const matchedCore = CORE_CAT_COLS.filter((c) => queryProfile[c] === profile[c]);
+        const mismatchedCore = CORE_CAT_COLS.filter((c) => queryProfile[c] !== profile[c]);
+        return {
+          profile,
+          distance: Number(d.toFixed(4)),
+          matchedCore,
+          mismatchedCore,
+          matchedCount: matchedCore.length,
+          totalCore: CORE_CAT_COLS.length,
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, k);
 
-  // Modality-decoupled categorical OHE Cosine for Proposed Hybrid
-  const cosineCat = cosineDistanceVec(v1.catOhe, v2.catOhe);
-  const hybrid = Math.max(0, Math.min(1, alpha * gower + (1 - alpha) * cosineCat));
+    byKernel[kernel] = ranked;
+  }
 
-  return {
-    gower,
-    euclidean,
-    cosine,
-    hybrid,
-    cosineCat,
-  };
-}
+  // Build rank-indexed rows (#1..#5) and flag cells where kernels disagree on neighbor ID or class
+  const rows = Array.from({ length: k }, (_, rankIdx) => {
+    const cells = Object.fromEntries(kernels.map((m) => [m, byKernel[m][rankIdx]]));
+    const ids = new Set(kernels.map((m) => cells[m].profile.id));
+    const classes = new Set(kernels.map((m) => cells[m].profile.dosha));
+    // Identify consensus neighbor ID if a majority shares it
+    const idCounts = {};
+    kernels.forEach((m) => {
+      const id = cells[m].profile.id;
+      idCounts[id] = (idCounts[id] || 0) + 1;
+    });
+    const maxCount = Math.max(...Object.values(idCounts));
+    const majorityId =
+      maxCount >= 2 ? Object.keys(idCounts).find((id) => idCounts[id] === maxCount) : null;
 
-// Retrieve Top-K nearest historical patients across all 4 metrics for Module 3 Live CBR Simulator
-export function retrieveTopKPatients(queryPatient, alpha = 0.75, k = 5) {
-  const scored = CLINICAL_COHORT.map((candidate) => {
-    const dists = computePairwiseDistances(queryPatient, candidate, alpha);
-    const matchedTraits = CATEGORICAL_KEYS.filter(
-      (key) => queryPatient[key] === candidate[key]
-    );
     return {
-      patient: candidate,
-      dists,
-      matchedTraits,
-      matchRatio: matchedTraits.length / CATEGORICAL_KEYS.length,
+      rank: rankIdx + 1,
+      cells,
+      anyIdDisagreement: ids.size > 1,
+      anyClassDisagreement: classes.size > 1,
+      majorityId,
     };
   });
 
-  const pickTop = (metricKey) =>
-    [...scored]
-      .sort((a, b) => a.dists[metricKey] - b.dists[metricKey])
-      .slice(0, k)
-      .map((item, rank) => ({
-        rank: rank + 1,
-        patient: item.patient,
-        distance: Number(item.dists[metricKey].toFixed(4)),
-        similarityPct: Number(((1 - item.dists[metricKey]) * 100).toFixed(1)),
-        matchedTraits: item.matchedTraits,
-        matchedCount: item.matchedTraits.length,
-        totalTraits: CATEGORICAL_KEYS.length,
-        bmiDelta: Number((item.patient.BMI - queryPatient.BMI).toFixed(1)),
-        pulseDelta: Math.round(item.patient.Pulse_Nadi_Rate - queryPatient.Pulse_Nadi_Rate),
-      }));
-
-  const results = {
-    gower: pickTop('gower'),
-    euclidean: pickTop('euclidean'),
-    cosine: pickTop('cosine'),
-    hybrid: pickTop('hybrid'),
-  };
-
-  // Compute concordance vs expectedDosha (or majority class of Hybrid Top-5 if custom)
-  const expected =
-    queryPatient.expectedDosha ||
-    results.hybrid[0]?.patient.dosha ||
-    'Vata';
-
-  const precisionAt5 = {};
-  Object.entries(results).forEach(([metric, list]) => {
-    const matches = list.filter((r) => r.patient.dosha === expected).length;
-    precisionAt5[metric] = Number(((matches / k) * 100).toFixed(1));
-  });
+  // Compute P@5 concordance for this single query per kernel
+  const queryP5 = {};
+  for (const kernel of kernels) {
+    const hits = byKernel[kernel].filter((item) => item.profile.dosha === queryProfile.dosha).length;
+    queryP5[kernel] = `${hits}/${k}`;
+  }
 
   return {
-    expectedDosha: expected,
-    topK: results,
-    precisionAt5,
+    rows,
+    queryP5,
+    kernels,
   };
 }
 
-// Build a 60x60 class-sorted distance matrix (10 patients per Tridosha class) for Module 4 Heatmap
-export function buildClassSortedHeatmapMatrix(metric = 'gower', alpha = 0.75) {
-  const sample = [];
-  const classes = ['Vata', 'Pitta', 'Kapha', 'Vata+Pitta', 'Pitta+Kapha', 'Vata+Kapha'];
-  classes.forEach((cls) => {
-    const subset = CLINICAL_COHORT.filter((p) => p.dosha === cls).slice(0, 10);
-    sample.push(...subset);
-  });
-
-  const n = sample.length;
-  const matrix = Array.from({ length: n }, () => new Float32Array(n));
-  const nonZero = [];
-
-  for (let i = 0; i < n; i++) {
-    for (let j = i; j < n; j++) {
-      if (i === j) {
-        matrix[i][j] = 0;
-      } else {
-        const d = computePairwiseDistances(sample[i], sample[j], alpha)[metric];
-        matrix[i][j] = d;
-        matrix[j][i] = d;
-        nonZero.push(d);
-      }
-    }
-  }
-
-  nonZero.sort((a, b) => a - b);
-  const median = nonZero[Math.floor(nonZero.length / 2)] || 0.35;
-  const gamma = 1 / (2 * median * median);
-
-  // Compute intra-class vs inter-class mean distance ratio (Block Contrast Index)
-  let intraSum = 0;
-  let intraCount = 0;
-  let interSum = 0;
-  let interCount = 0;
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      if (sample[i].dosha === sample[j].dosha) {
-        intraSum += matrix[i][j];
-        intraCount++;
-      } else {
-        interSum += matrix[i][j];
-        interCount++;
-      }
-    }
-  }
-
-  const intraMean = intraSum / Math.max(1, intraCount);
-  const interMean = interSum / Math.max(1, interCount);
-
-  return {
-    sample,
-    matrix,
-    n,
-    median: Number(median.toFixed(4)),
-    gamma: Number(gamma.toFixed(3)),
-    intraMean: Number(intraMean.toFixed(4)),
-    interMean: Number(interMean.toFixed(4)),
-    contrastRatio: Number((interMean / Math.max(1e-5, intraMean)).toFixed(2)),
-  };
-}
+export { NUM_COLS, CAT_COLS, CORE_CAT_COLS };

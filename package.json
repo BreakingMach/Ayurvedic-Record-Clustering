@@ -1,8 +1,8 @@
 {
   "name": "ayurvedic-record-clustering",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "SIH26008 AyurFoundry — Benchmarking Gower, Euclidean, and Cosine Distances for Similarity-Based Grouping of Ayurvedic Patient Case Records",
+  "description": "Benchmarking Gower, Euclidean, and Cosine Distances for Similarity-Based Grouping of Ayurvedic Patient Case Records",
   "author": "Sreevyas C S (12400848, LPU)",
   "type": "module",
   "scripts": {
