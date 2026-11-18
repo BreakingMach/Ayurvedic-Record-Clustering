@@ -2,9 +2,13 @@
 
 from .data import DatasetBundle, load_config, load_tridosha_dataset
 from .distances import (
+    compute_query_to_db_distances,
     cosine_distance,
+    cosine_range_distance,
     euclidean_distance,
+    euclidean_range_distance,
     gower_distance,
+    gower_zscore_distance,
     hamming_distance,
 )
 from .evaluation import (
@@ -20,9 +24,13 @@ __all__ = [
     "load_config",
     "load_tridosha_dataset",
     "gower_distance",
+    "gower_zscore_distance",
     "euclidean_distance",
+    "euclidean_range_distance",
     "cosine_distance",
+    "cosine_range_distance",
     "hamming_distance",
+    "compute_query_to_db_distances",
     "evaluate_knn_cv",
     "evaluate_loo_retrieval",
     "evaluate_clustering",

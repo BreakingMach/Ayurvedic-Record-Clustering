@@ -34,3 +34,26 @@ Conservative choices logged per Rule `R7` in `docs/CONTEXT.md`.
 - **Stratified 40-query allocation:** Exact proportional shares for 40 queries out of 1,200 rows are `[20.8, 8.8, 4.8, 2.4, 1.6, 1.6]` across `[Vata+Pitta, Vata, Pitta, Kapha, Pitta+Kapha, Vata+Kapha]`. To treat the two equal-sized smallest classes (`48` rows each) symmetrically while minimizing total rounding error via largest-remainder allocation, `build_sheet.py` allocates `[21, 9, 4, 2, 2, 2]` (`sum = 40`).
 - **Hidden answer key separation:** The unblinded mapping (`pair_id`, original row indices, true `neighbour_rank`, real-data distance, and dataset-provided `Dosha` labels) is written separately to `expert_review/private/answer_key.csv` so only `rating_sheet.xlsx` and `instructions.md` are shared with reviewers.
 - **Pending status enforcement:** Until at least one completed reviewer sheet is scored by `expert_review/analysis/expert_agreement.py`, `results/expert_review.json` reports `"status": "pending"` and `"display_label": "Practitioner validation: pending"`, surfaced consistently in docs and the UI.
+
+## D8. Post-Hoc Scaling Ablation on Synthetic Cohorts (`run_scaling_ablation.py`)
+- **Status:** Labelled explicitly as `EXPLORATORY and POST-HOC`. Added after inspecting Experiment B results to isolate the confounder between distance metric formulation (L1 vs L2 vs angular) and numeric feature pre-scaling (range normalization vs z-scoring).
+- **Frozen Main Grid (R3):** The primary benchmark results in `results/synthetic.json` remain completely frozen and unmodified. Ablation results are stored separately in `results/synthetic_scaling_ablation.json` and documented in `docs/SCALING_ABLATION.md`.
+- **Ablation Scope:** Evaluated on the synthetic baseline (`eps=0.2, d=1.0, outliers=0, missing=0, label_noise=0, m=29`), the numeric separation sweep ($d \in \{0.0, 0.25, 0.5, 1.0, 2.0\}$), and the categorical noise sweep ($\varepsilon \in \{0.0, 0.1, 0.2, 0.3, 0.4\}$) across the identical 20 seeds (`42..61`).
+- **Variants:**
+  - `gower_zscore`: Standard deviation normalized numerics ($|x_{ik} - x_{jk}| / s_k = |z_{ik} - z_{jk}|$) averaged with simple matching categoricals.
+  - `euclidean_range`: Range-normalised numerics $[0, 1]$ concatenated with one-hot categoricals, Euclidean distance.
+  - `cosine_range`: Range-normalised numerics $[0, 1]$ concatenated with one-hot categoricals, Cosine distance.
+
+## D9. Missingness Robustness Protocol on Real Categorical Data (`run_missingness.py`)
+- **Protocol:** Evaluates query-only MCAR missingness across missing fractions $p \in \{0.0, 0.1, 0.2, 0.3, 0.5, 0.7\}$ over all $N=1,200$ leave-one-out queries against the complete database across 20 fixed seeds (`42..61`). For each query, exactly $k = \text{round}(p \times 29)$ traits are masked at random without replacement.
+- **Observed-Only Mathematical Equivalence:**
+  - On categorical data, `cosine_observed_only` is algebraically identical to `gower` ($D_{\text{cosine\_obs}} \equiv D_{\text{gower}} = \text{mismatches}_{O_i} / |O_i|$).
+  - `euclidean_observed_only` is an exact monotone transform of `gower` ($D_{\text{euclid\_obs}} = \sqrt{2 |O_i|} \cdot \sqrt{D_{\text{gower}}}$). Because $|O_i|$ is constant across all candidate database records for a fixed query, neighbour rankings, kNN macro-F1, accuracy, and LOO macro P@5 under stable mergesort are 100% mathematically identical to `gower`.
+  - Similarly, `cosine_modeimpute` is an exact monotonic transformation of `euclidean_modeimpute` ($D_{\text{cosine\_imp}} = D_{\text{euclid\_imp}}^2 / 58$ on 29-trait one-hot vectors), producing identical neighbour rankings and retrieval scores.
+- **Tie Reporting:** To measure the role of deterministic tie-breaking as missingness degrades trait resolution, `mean_kth_distance_ties` reports the average number of candidate database records sharing the exact distance of the 5th-ranked neighbor ($d_{(5)}$).
+
+## D10. UI Data Exports & Parity Fixtures (`export_ui_data.py`, `tests/fixtures/parity.json`)
+- **Parity-Tested Workbench Logic (R10):** Top-10 nearest-neighbour retrieval in the frontend workbench must exactly match the Python reference implementation down to float precision and stable mergesort tie-breaking across complete, partial, and duplicate queries.
+- **Non-Diagnostic Language (R10, R11):** Outputs derived from retrieved neighbours are named strictly "labels of nearest dataset records", never "diagnosis", "prediction", or "disease classification". All exports embed the mandatory research prototype disclaimer.
+- **No Label-Based Metric Highlighting (R12):** Exports and dashboard views present all three metrics side-by-side without selecting or defaulting to a "winner" based on label metrics. Default configurations are specified neutrally by config.
+- **Client-Side Isolation (R13):** All workbench distance computations execute locally in the client environment without transmitting user-entered trait queries across the network.

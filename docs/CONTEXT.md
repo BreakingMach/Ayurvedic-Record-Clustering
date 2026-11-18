@@ -29,3 +29,7 @@ R6. Do not delete the original notebook; add a note at its top that it is supers
 R7. Ambiguities: choose the most conservative option and log it in docs/DECISIONS.md.
 R8. One git commit per step. After each step, stop and report; do not start the next step.
 R9. Never reintroduce "SIH26008" or "Smart India Hackathon" anywhere.
+R10. Workbench outputs must come from logic parity-tested against Python. Neighbour-based outputs are called "labels of nearest dataset records", never "diagnosis" or "prediction of disease".
+R11. The workbench and exports show: "Research prototype on a dataset of unverified origin. Not a diagnostic tool."
+R12. The UI never defaults to or highlights a "best" clustering, metric or k chosen by label-based scores. Defaults come from config.
+R13. User-entered data stays in the browser. No network calls with user data.
