@@ -2,7 +2,8 @@
 
 **Author:** Sreevyas C S (Reg No: `12400848`, B.Tech CSE — AI & ML, Lovely Professional University)  
 **Supervisor:** Dr. Bhupinder Singh  
-**Repository:** [https://github.com/BreakingMach/Ayurvedic-Record-Clustering](https://github.com/BreakingMach/Ayurvedic-Record-Clustering)
+**Repository:** [https://github.com/BreakingMach/Ayurvedic-Record-Clustering](https://github.com/BreakingMach/Ayurvedic-Record-Clustering)  
+**Clinical Review Status:** Practitioner validation: pending (blinded sheet prepared in `expert_review/rating_sheet.xlsx`)
 
 ---
 

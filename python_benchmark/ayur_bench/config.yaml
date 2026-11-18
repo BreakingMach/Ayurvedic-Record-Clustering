@@ -139,3 +139,11 @@ experiment_synthetic:
   cache_dir: "results/.cache_synthetic"
   output_dir: "results"
   findings_doc: "docs/SYNTHETIC_FINDINGS.md"
+
+expert_review:
+  n_queries: 40
+  top_k: 5
+  seed: 2026
+  rating_sheet: "expert_review/rating_sheet.xlsx"
+  answer_key: "expert_review/private/answer_key.csv"
+  output_json: "results/expert_review.json"

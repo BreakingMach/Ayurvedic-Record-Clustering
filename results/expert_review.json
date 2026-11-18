@@ -1,0 +1,9 @@
+{
+  "status": "pending",
+  "display_label": "Practitioner validation: pending",
+  "timestamp_utc": "2026-11-18T10:06:01.872725+00:00",
+  "n_reviewers": 0,
+  "n_total_pairs_in_sheet": 200,
+  "n_rated_pairs": 0,
+  "note": "No completed practitioner rating sheets have been submitted yet. Do not claim practitioner validation until blind ratings are analyzed."
+}

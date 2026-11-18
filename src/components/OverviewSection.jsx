@@ -2,6 +2,7 @@ import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { STUDY_METADATA } from '../data/literatureData';
 import benchmarkData from '../data/realBenchmarkResults.json';
+import expertReviewStatus from '../../results/expert_review.json';
 
 export default function OverviewSection() {
   const { meta } = benchmarkData;
@@ -14,15 +15,19 @@ export default function OverviewSection() {
             {STUDY_METADATA.author} ({STUDY_METADATA.regNo}) · {STUDY_METADATA.program},{' '}
             {STUDY_METADATA.institution} · Supervised by {STUDY_METADATA.supervisor}
           </span>
-          <a
-            href={STUDY_METADATA.repoUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-teal-700 hover:underline"
-          >
-            Repository
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+            <a
+              href={STUDY_METADATA.repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-medium text-teal-700 hover:underline"
+            >
+              Repository
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+        </div>
+
+        <div className="inline-flex items-center rounded border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-700">
+          {expertReviewStatus.display_label}
         </div>
 
         <h1 className="max-w-4xl text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
