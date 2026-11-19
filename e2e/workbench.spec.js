@@ -13,6 +13,9 @@ test.describe('Similarity Workbench E2E', () => {
   test('1. Fill form with all 29 traits, run retrieval, assert results panel renders with neighbour table', async ({
     page,
   }) => {
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message));
+
     // Click "Load Example #1" which populates all 29 traits from dataset record 0
     const loadExampleBtn = page.getByRole('button', { name: 'Load Example #1' });
     await loadExampleBtn.click();
@@ -26,7 +29,7 @@ test.describe('Similarity Workbench E2E', () => {
 
     // Assert results panel appears
     await expect(page.getByText('Retrieved Nearest Neighbours')).toBeVisible();
-    await expect(page.getByText('Gower Distance')).toBeVisible();
+    await expect(page.getByText('Gower Distance').first()).toBeVisible();
     await expect(page.getByText('Euclidean (mode-impute)')).toBeVisible();
     await expect(page.getByText('Cosine (mode-impute)')).toBeVisible();
 
@@ -117,6 +120,63 @@ test.describe('Similarity Workbench E2E', () => {
     await expect(page.getByText('Observed-only variants')).toBeVisible();
     await expect(page.getByText('Euclidean (observed-only)')).toBeVisible();
     await expect(page.getByText('Cosine (observed-only)')).toBeVisible();
+  });
+
+  test('6. Create a patient record, load preset, run prediction, assert consensus phenotype and recommendations', async ({
+    page,
+  }) => {
+    // Fill custom patient metadata
+    const nameInput = page.getByPlaceholder('e.g. S. Sharma');
+    await nameInput.fill('Dr. A. Verma');
+
+    const ageInput = page.getByPlaceholder('e.g. 38');
+    await ageInput.fill('45');
+
+    const complaintInput = page.getByPlaceholder('Describe current clinical symptoms, digestive irregularities, sleep complaints, or stress factors...');
+    await complaintInput.fill('Persistent dry cough, disturbed light sleep, irregular hunger and joint stiffness.');
+
+    // Click "Vata" preset button
+    await page.getByRole('button', { name: 'Vata', exact: true }).click();
+
+    // Verify 29 of 29 traits populated
+    await expect(page.getByText('29 of 29')).toBeVisible();
+
+    // Run prediction / retrieval
+    const runBtn = page.getByRole('button', { name: 'Run Retrieval' });
+    await runBtn.click();
+
+    // Verify Executive Consensus Phenotype Prediction Card renders
+    await expect(page.getByText('Predicted Constitutional Phenotype:')).toBeVisible();
+    await expect(page.getByText(/Cohort Confidence/i)).toBeVisible();
+
+    // Verify Phenotypic Concordance & Archetype Deviations render
+    await expect(page.getByText('Phenotypic Concordance & Archetype Deviations')).toBeVisible();
+    await expect(page.getByText(/Concordant Archetype Traits/i)).toBeVisible();
+
+    // Verify Classical Ayurvedic Recommendations render
+    await expect(page.getByText(/Constitutional Harmonization & Recommendations/i)).toBeVisible();
+    await expect(page.getByText('Ahara (Dietary Harmonization)')).toBeVisible();
+    await expect(page.getByText('Vihara (Lifestyle & Dinacharya Routine)')).toBeVisible();
+
+    // Verify Top Nearest Reference Historical Cases render
+    await expect(page.getByText('Nearest Reference Patient Cases from Historical Cohort')).toBeVisible();
+    await expect(page.getByText(/Similarity/i).first()).toBeVisible();
+
+    // Save patient record
+    const saveBtn = page.getByRole('button', { name: 'Save Patient' });
+    await saveBtn.click();
+
+    // Verify Saved Patient Registry displays the newly saved patient
+    await expect(page.getByText('Saved Patient Registry')).toBeVisible();
+    await expect(page.getByText('Dr. A. Verma', { exact: true })).toBeVisible();
+
+    // Switch to Metric Diagnostics & MDS tab
+    const diagTabBtn = page.getByRole('button', { name: 'Metric Diagnostics & MDS' });
+    await diagTabBtn.click();
+
+    // Verify Trait Match Matrix and MDS map render in diagnostics tab
+    await expect(page.getByText('Trait Match Matrix')).toBeVisible();
+    await expect(page.getByText('2D Multidimensional Scaling (MDS) Map')).toBeVisible();
   });
 });
 

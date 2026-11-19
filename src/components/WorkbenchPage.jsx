@@ -11,6 +11,22 @@ import {
   Trash2,
   FolderOpen,
   Info,
+  User,
+  UserPlus,
+  Heart,
+  Sparkles,
+  BookOpen,
+  Stethoscope,
+  ChevronDown,
+  ChevronRight,
+  Printer,
+  ClipboardList,
+  Check,
+  X,
+  ShieldCheck,
+  Scale,
+  Activity,
+  Layers,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -41,6 +57,10 @@ import {
   toCsv,
 } from '../engine/distances.js';
 import { DOSHA_PALETTE } from '../data/literatureData.js';
+import {
+  AYURVEDIC_RECOMMENDATIONS,
+  getTraitSpecificGuidance,
+} from '../data/ayurvedicRecommendations.js';
 
 // R11 Mandatory Disclaimer Text
 const R11_DISCLAIMER =
@@ -58,6 +78,135 @@ const VITAL_BOUNDS = {
   pulse: { min: 45, max: 130, label: 'Pulse Rate (bpm)' },
 };
 
+// Validated Clinical Intake Presets
+const VATA_PRESET = {
+  'Body Size': 'Slim',
+  'Body Weight': 'Low - difficulties in gaining weight',
+  'Height': 'Short',
+  'Bone Structure': 'Light, Small bones, prominent joints',
+  'Complexion': 'Dark-Complexion, tans easily',
+  'General feel of skin': 'Dry and thin, cool to touch, rough',
+  'Texture of Skin': 'Dry, pigments and aging',
+  'Hair Color': 'Black/Brown,dull',
+  'Appearance of Hair': 'Dry, black, knotted, brittle',
+  'Shape of face': 'Long, angular, thin',
+  'Eyes': 'Small, active, darting, dark eyes',
+  'Eyelashes': 'Scanty eyelashes',
+  'Blinking of Eyes': 'Excessive Blinking',
+  'Cheeks': 'Wrinkled, Sunken',
+  'Nose': 'Crooked, Narrow',
+  'Teeth and gums': 'Irregular, Protruding teeth, Receding gums',
+  'Lips': 'Tight, thin, dry lips which chaps easily',
+  'Nails': 'Dry, Rough, Brittle, Break',
+  'Appetite': 'Irregular, Scanty',
+  'Liking tastes': 'Sweet / Sour / Salty',
+  'Metabolism Type': 'fast',
+  'Climate Preference': 'warm',
+  'Stress Levels': 'high',
+  'Sleep Patterns': 'short',
+  'Dietary Habits': 'vegetarian',
+  'Physical Activity Level': 'moderate',
+  'Water Intake': 'low',
+  'Digestion Quality': 'weak',
+  'Skin Sensitivity': 'sensitive',
+};
+
+const PITTA_PRESET = {
+  'Body Size': 'Medium',
+  'Body Weight': 'Moderate - no difficulties in gaining or losing weight',
+  'Height': 'Average',
+  'Bone Structure': 'Medium bone structure',
+  'Complexion': 'Fair-skin sunburns easily',
+  'General feel of skin': 'Smooth and warm, oily T-zone',
+  'Texture of Skin': 'Freckles, many moles, redness and rashes',
+  'Hair Color': 'Red, light brown, yellow',
+  'Appearance of Hair': 'Straight, oily',
+  'Shape of face': 'Heart-shaped, pointed chin',
+  'Eyes': 'Medium-sized, penetrating, light-sensitive eyes',
+  'Eyelashes': 'Moderate eyelashes',
+  'Blinking of Eyes': 'Moderate Blinking',
+  'Cheeks': 'Smooth, Flat',
+  'Nose': 'Pointed, Average',
+  'Teeth and gums': 'Medium-sized teeth, Reddish gums',
+  'Lips': 'Lips are soft, medium-sized',
+  'Nails': 'Sharp, Flexible, Pink, Lustrous',
+  'Appetite': 'Strong, Unbearable',
+  'Liking tastes': 'Sweet / Bitter / Astringent',
+  'Metabolism Type': 'moderate',
+  'Climate Preference': 'cool',
+  'Stress Levels': 'moderate',
+  'Sleep Patterns': 'moderate',
+  'Dietary Habits': 'vegetarian',
+  'Physical Activity Level': 'high',
+  'Water Intake': 'high',
+  'Digestion Quality': 'strong',
+  'Skin Sensitivity': 'sensitive',
+};
+
+const KAPHA_PRESET = {
+  'Body Size': 'Large',
+  'Body Weight': 'Heavy - difficulties in losing weight',
+  'Height': 'Tall',
+  'Bone Structure': 'Large, broad shoulders , heavy bone structure',
+  'Complexion': 'White, pale, tans easily',
+  'General feel of skin': 'Thick and moist/greasy, cold',
+  'Texture of Skin': 'Oily',
+  'Hair Color': 'Brown',
+  'Appearance of Hair': 'Thick, curly',
+  'Shape of face': 'Large, round, full',
+  'Eyes': 'Big, round, beautiful, glowing eyes',
+  'Eyelashes': 'Thick/Fused eyelashes',
+  'Blinking of Eyes': 'More or less stable',
+  'Cheeks': 'Rounded, Plump',
+  'Nose': 'Rounded, Large open nostrils',
+  'Teeth and gums': 'Big, White, Strong teeth, Healthy gums',
+  'Lips': 'Lips are large, soft, pink, and full',
+  'Nails': 'Thick, Oily, Smooth, Polished',
+  'Appetite': 'Slow but steady',
+  'Liking tastes': 'Pungent / Bitter / Astringent',
+  'Metabolism Type': 'slow',
+  'Climate Preference': 'warm',
+  'Stress Levels': 'low',
+  'Sleep Patterns': 'long',
+  'Dietary Habits': 'vegetarian',
+  'Physical Activity Level': 'sedentary',
+  'Water Intake': 'moderate',
+  'Digestion Quality': 'moderate',
+  'Skin Sensitivity': 'insensitive',
+};
+
+const DUAL_DOSHA_PRESET = {
+  'Body Size': 'Medium',
+  'Body Weight': 'Moderate - no difficulties in gaining or losing weight',
+  'Height': 'Average',
+  'Bone Structure': 'Medium bone structure',
+  'Complexion': 'Fair-skin sunburns easily',
+  'General feel of skin': 'Smooth and warm, oily T-zone',
+  'Texture of Skin': 'Oily',
+  'Hair Color': 'Black/Brown,dull',
+  'Appearance of Hair': 'Dry, black, knotted, brittle',
+  'Shape of face': 'Long, angular, thin',
+  'Eyes': 'Medium-sized, penetrating, light-sensitive eyes',
+  'Eyelashes': 'Moderate eyelashes',
+  'Blinking of Eyes': 'Moderate Blinking',
+  'Cheeks': 'Smooth, Flat',
+  'Nose': 'Crooked, Narrow',
+  'Teeth and gums': 'Medium-sized teeth, Reddish gums',
+  'Lips': 'Lips are soft, medium-sized',
+  'Nails': 'Dry, Rough, Brittle, Break',
+  'Appetite': 'Strong, Unbearable',
+  'Liking tastes': 'Sweet / Sour / Salty',
+  'Metabolism Type': 'moderate',
+  'Climate Preference': 'warm',
+  'Stress Levels': 'moderate',
+  'Sleep Patterns': 'moderate',
+  'Dietary Habits': 'vegetarian',
+  'Physical Activity Level': 'moderate',
+  'Water Intake': 'moderate',
+  'Digestion Quality': 'moderate',
+  'Skin Sensitivity': 'normal',
+};
+
 export default function WorkbenchPage() {
   // 1. Data assets state
   const [dataAssets, setDataAssets] = useState({
@@ -69,9 +218,21 @@ export default function WorkbenchPage() {
     embeddings: null,
   });
 
-  // 2. Form state
-  const [activeTab, setActiveTab] = useState('single'); // 'single' | 'batch'
+  // 2. Navigation & View tabs: 'single' (Intake & Recommendations), 'diagnostics' (Metrics & MDS), 'batch' (CSV)
+  const [activeTab, setActiveTab] = useState('single');
   const [datasetMode, setDatasetMode] = useState('real'); // 'real' | 'synthetic'
+
+  // 3. Patient Demographic & Clinical Record State
+  const [patientProfile, setPatientProfile] = useState({
+    patientId: 'PT-2026-0842',
+    name: 'S. Sharma',
+    age: '38',
+    gender: 'Female',
+    chiefComplaint: 'Variable digestion, mild abdominal bloating after dry food, disturbed sleep',
+    notes: 'Intake for constitutional similarity evaluation against historical cohort.',
+  });
+
+  // 4. Clinical Trait Selections & Numeric Vitals
   const [traitSelections, setTraitSelections] = useState({}); // { [traitName]: levelString or '' }
   const [vitalInputs, setVitalInputs] = useState({
     age: '',
@@ -87,8 +248,9 @@ export default function WorkbenchPage() {
   });
   const [results, setResults] = useState(null);
   const [matrixSortBy, setMatrixSortBy] = useState('order'); // 'order' | 'mismatches'
+  const [expandedHistoricalIdx, setExpandedHistoricalIdx] = useState(null);
 
-  // 3. Batch mode state
+  // 5. Batch mode state
   const [batchFile, setBatchFile] = useState(null);
   const [batchErrors, setBatchErrors] = useState([]);
   const [batchParsedRows, setBatchParsedRows] = useState([]);
@@ -96,7 +258,7 @@ export default function WorkbenchPage() {
   const [batchRunning, setBatchRunning] = useState(false);
   const fileInputRef = useRef(null);
 
-  // 4. Saved cases (localStorage)
+  // 6. Saved cases registry (localStorage)
   const [savedCases, setSavedCases] = useState([]);
   const [caseNameInput, setCaseNameInput] = useState('');
 
@@ -219,6 +381,43 @@ export default function WorkbenchPage() {
     }
   }, [currentMeta, datasetMode]);
 
+  // Precompute class archetype modes from historical records
+  const classArchetypes = useMemo(() => {
+    if (!currentMeta) return null;
+    const { traits, rows, labels, classes } = currentMeta;
+    const archMap = {};
+    classes.forEach((cName, cIdx) => {
+      const cRows = rows.filter((_, idx) => labels[idx] === cIdx);
+      if (cRows.length === 0) return;
+      const traitModes = {};
+      traits.forEach((t, tIdx) => {
+        const counts = {};
+        cRows.forEach((r) => {
+          const val = datasetMode === 'real' ? r[tIdx] : r.traits[tIdx];
+          if (val !== null && val !== undefined) {
+            counts[val] = (counts[val] || 0) + 1;
+          }
+        });
+        let maxV = 0;
+        let maxC = -1;
+        for (const [v, c] of Object.entries(counts)) {
+          if (c > maxC) {
+            maxC = c;
+            maxV = Number(v);
+          }
+        }
+        traitModes[t.name] = {
+          levelIdx: maxV,
+          levelName: t.levels[maxV],
+          frequency: maxC,
+          percent: ((maxC / cRows.length) * 100).toFixed(1),
+        };
+      });
+      archMap[cName] = { count: cRows.length, traitModes };
+    });
+    return archMap;
+  }, [currentMeta, datasetMode]);
+
   // Count entered traits and vitals
   const enteredTraitsCount = useMemo(() => {
     if (!currentMeta) return 0;
@@ -246,6 +445,16 @@ export default function WorkbenchPage() {
     setVitalInputs((prev) => ({ ...prev, [field]: val }));
   };
 
+  // Handle patient profile change
+  const handleProfileChange = (field, val) => {
+    setPatientProfile((prev) => ({ ...prev, [field]: val }));
+  };
+
+  const handleGenerateNewPatientId = () => {
+    const randomId = `PT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setPatientProfile((prev) => ({ ...prev, patientId: randomId }));
+  };
+
   // Fill random query
   const handleFillRandom = () => {
     if (!currentMeta) return;
@@ -263,6 +472,39 @@ export default function WorkbenchPage() {
         systolic_bp: String(Math.floor(105 + Math.random() * 35)),
         pulse: String(Math.floor(62 + Math.random() * 26)),
       });
+    }
+  };
+
+  // Load preset archetypes
+  const handleLoadPreset = (presetType) => {
+    if (presetType === 'vata') {
+      setTraitSelections(VATA_PRESET);
+      setPatientProfile((prev) => ({
+        ...prev,
+        name: prev.name && prev.name !== 'S. Sharma' ? prev.name : 'Vata Archetype Profile',
+        chiefComplaint: prev.chiefComplaint || 'Light sleep, variable appetite, dry skin, sensitive to cold',
+      }));
+    } else if (presetType === 'pitta') {
+      setTraitSelections(PITTA_PRESET);
+      setPatientProfile((prev) => ({
+        ...prev,
+        name: prev.name && prev.name !== 'S. Sharma' ? prev.name : 'Pitta Archetype Profile',
+        chiefComplaint: prev.chiefComplaint || 'Sharp digestion, heat intolerance, skin redness/freckles',
+      }));
+    } else if (presetType === 'kapha') {
+      setTraitSelections(KAPHA_PRESET);
+      setPatientProfile((prev) => ({
+        ...prev,
+        name: prev.name && prev.name !== 'S. Sharma' ? prev.name : 'Kapha Archetype Profile',
+        chiefComplaint: prev.chiefComplaint || 'Heaviness after meals, deep sleep, cold damp sensitivity',
+      }));
+    } else if (presetType === 'dual') {
+      setTraitSelections(DUAL_DOSHA_PRESET);
+      setPatientProfile((prev) => ({
+        ...prev,
+        name: prev.name && prev.name !== 'S. Sharma' ? prev.name : 'Dual Dosha (Vata+Pitta) Profile',
+        chiefComplaint: prev.chiefComplaint || 'Combined fluctuating appetite and sharp digestive sensitivity',
+      }));
     }
   };
 
@@ -291,6 +533,11 @@ export default function WorkbenchPage() {
         pulse: String(row.vitals[3]),
       });
     }
+    setPatientProfile((prev) => ({
+      ...prev,
+      name: `Historical Case #${targetIdx}`,
+      chiefComplaint: 'Dataset reference case loaded for benchmark parity verification.',
+    }));
   };
 
   // Reset form
@@ -300,19 +547,23 @@ export default function WorkbenchPage() {
     setResults(null);
   };
 
-  // Save current case
+  // Save current case to localStorage
   const handleSaveCase = () => {
     const name =
       caseNameInput.trim() ||
+      patientProfile.name ||
       `Case ${savedCases.length + 1} (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
     const newCase = {
       id: `case_${Date.now()}`,
       name,
+      patientProfile: { ...patientProfile, name },
       timestamp: new Date().toISOString(),
       datasetMode,
       traits: { ...traitSelections },
       vitals: { ...vitalInputs },
       enteredCount: enteredTraitsCount,
+      predictedClass: results ? results.primaryConsensusClass : null,
+      confidence: results ? results.consensusConfidence : null,
     };
     saveCaseToStorage([newCase, ...savedCases]);
     setCaseNameInput('');
@@ -323,6 +574,11 @@ export default function WorkbenchPage() {
     setDatasetMode(saved.datasetMode);
     setTraitSelections(saved.traits || {});
     setVitalInputs(saved.vitals || { age: '', bmi: '', systolic_bp: '', pulse: '' });
+    if (saved.patientProfile) {
+      setPatientProfile(saved.patientProfile);
+    } else {
+      setPatientProfile((prev) => ({ ...prev, name: saved.name }));
+    }
   };
 
   // Delete saved case
@@ -331,7 +587,12 @@ export default function WorkbenchPage() {
     saveCaseToStorage(next);
   };
 
-  // Run retrieval calculation
+  // Print patient assessment report
+  const handlePrintReport = () => {
+    window.print();
+  };
+
+  // Run retrieval and prediction calculation
   const handleRunRetrieval = () => {
     if (!currentMeta || !precomputed) return;
     const { traits } = currentMeta;
@@ -471,6 +732,86 @@ export default function WorkbenchPage() {
     const euclidVote = knnClassVote(euclidModeTop.indices, labels, classes);
     const cosineVote = knnClassVote(cosineModeTop.indices, labels, classes);
 
+    // Determine primary consensus phenotype under Gower & multi-metric agreement
+    let primaryConsensusClass = classes[0];
+    let maxGowerVotes = -1;
+    for (const [cName, cnt] of Object.entries(gowerVote)) {
+      if (cnt > maxGowerVotes) {
+        maxGowerVotes = cnt;
+        primaryConsensusClass = cName;
+      }
+    }
+    const consensusConfidence = Math.round((maxGowerVotes / kParam) * 100);
+
+    const gowerWinner = Object.entries(gowerVote).sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
+    const euclidWinner = Object.entries(euclidVote).sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
+    const cosineWinner = Object.entries(cosineVote).sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
+    const metricsConsensusAgree = gowerWinner === euclidWinner && euclidWinner === cosineWinner;
+
+    // Archetype concordance analysis: compare patient traits with statistical archetype mode
+    const targetArchetype = classArchetypes?.[primaryConsensusClass];
+    const concordantTraits = [];
+    const atypicalTraits = [];
+    if (targetArchetype) {
+      traits.forEach((t) => {
+        const userLevel = traitSelections[t.name];
+        if (!userLevel) return;
+        const archMode = targetArchetype.traitModes[t.name];
+        if (archMode && archMode.levelName === userLevel) {
+          concordantTraits.push({
+            trait: t.name,
+            level: userLevel,
+            percent: archMode.percent,
+          });
+        } else if (archMode) {
+          atypicalTraits.push({
+            trait: t.name,
+            patientLevel: userLevel,
+            archetypeLevel: archMode.levelName,
+            percent: archMode.percent,
+          });
+        }
+      });
+    }
+    const concordancePct =
+      enteredTraitsCount > 0
+        ? Math.round((concordantTraits.length / enteredTraitsCount) * 100)
+        : 0;
+
+    // Classical recommendations from literature data
+    const literatureRecommendations = AYURVEDIC_RECOMMENDATIONS[primaryConsensusClass] || null;
+    const traitSpecificGuidance = getTraitSpecificGuidance(traitSelections);
+
+    // Top 5 Historical Reference Cases
+    const topHistoricalMatches = gowerTop.indices.slice(0, 5).map((recIdx, rank) => {
+      const dist = gowerTop.distances[rank];
+      const similarityPct = Math.max(0, (1 - dist) * 100).toFixed(1);
+      const recLabel = classes[labels[recIdx]];
+      let matchingTraitsCount = 0;
+      const traitMatches = [];
+      traits.forEach((t, tIdx) => {
+        const uVal = queryTraits[tIdx];
+        const rVal = datasetMode === 'real' ? dbRows[recIdx][tIdx] : dbRows[recIdx].traits[tIdx];
+        const isMatch = uVal !== null && uVal === rVal;
+        if (isMatch) matchingTraitsCount++;
+        traitMatches.push({
+          trait: t.name,
+          userLevel: uVal !== null ? t.levels[uVal] : 'Unknown',
+          recLevel: t.levels[rVal],
+          isMatch,
+        });
+      });
+      return {
+        rank: rank + 1,
+        recordIndex: recIdx,
+        distance: dist,
+        similarityPct,
+        label: recLabel,
+        matchingTraitsCount,
+        traitMatches,
+      };
+    });
+
     // Format vote chart data
     const voteChartData = classes.map((cName) => ({
       name: cName,
@@ -536,6 +877,22 @@ export default function WorkbenchPage() {
       queryNumerics,
       hasMissing,
       missingTraitsCount,
+      primaryConsensusClass,
+      consensusConfidence,
+      maxGowerVotes,
+      gowerWinner,
+      euclidWinner,
+      cosineWinner,
+      gowerVote,
+      euclidVote,
+      cosineVote,
+      metricsConsensusAgree,
+      concordantTraits,
+      atypicalTraits,
+      concordancePct,
+      literatureRecommendations,
+      traitSpecificGuidance,
+      topHistoricalMatches,
       gower: { ...gowerTop, dists: gowerDists },
       euclidMode: { ...euclidModeTop, dists: euclidModeDists },
       cosineMode: { ...cosineModeTop, dists: cosineModeDists },
@@ -609,9 +966,15 @@ export default function WorkbenchPage() {
       notice: R11_DISCLAIMER,
       dataset: datasetMode,
       timestamp: results.timestamp,
+      patient_profile: patientProfile,
+      predicted_consensus_phenotype: results.primaryConsensusClass,
+      consensus_confidence_pct: results.consensusConfidence,
+      archetype_concordance_pct: results.concordancePct,
       k: kParam,
       query_traits: traitSelections,
       query_vitals: datasetMode === 'synthetic' ? vitalInputs : null,
+      recommendations: results.literatureRecommendations,
+      functional_guidance: results.traitSpecificGuidance,
       top_k_neighbors: {
         gower: results.gower.indices.map((idx, rank) => ({
           rank: rank + 1,
@@ -639,7 +1002,7 @@ export default function WorkbenchPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `similarity_retrieval_${datasetMode}_case.json`;
+    a.download = `patient_${patientProfile.patientId || 'record'}_assessment.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -657,12 +1020,12 @@ export default function WorkbenchPage() {
     }));
 
     const csvBody = toCsv(rows);
-    const fullCsv = `# NOTICE: ${R11_DISCLAIMER}\n# Dataset: ${datasetMode} (N=${currentMeta.rows.length})\n${csvBody}`;
+    const fullCsv = `# NOTICE: ${R11_DISCLAIMER}\n# Patient ID: ${patientProfile.patientId}\n# Dataset: ${datasetMode} (N=${currentMeta.rows.length})\n${csvBody}`;
     const blob = new Blob([fullCsv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `similarity_retrieval_${datasetMode}_neighbors.csv`;
+    a.download = `patient_${patientProfile.patientId || 'record'}_neighbors.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -678,7 +1041,6 @@ export default function WorkbenchPage() {
         ? [...catHeaders, 'age', 'bmi', 'systolic_bp', 'pulse']
         : catHeaders;
 
-    // Add 1 sample row
     const sampleRow = dataAssets.realRecords.traits.map((t) => t.levels[0]);
     if (datasetMode === 'synthetic') {
       sampleRow.push('35', '24.5', '120', '72');
@@ -711,7 +1073,6 @@ export default function WorkbenchPage() {
         return;
       }
 
-      // Check row limit (max 1000)
       if (lines.length - 1 > 1000) {
         setBatchErrors(['Batch upload exceeds the maximum limit of 1,000 rows.']);
         return;
@@ -719,13 +1080,11 @@ export default function WorkbenchPage() {
 
       const rawHeaders = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
       const traits = currentMeta.traits;
-      const traitMap = new Map(traits.map((t) => [t.name, t]));
 
       const errors = [];
       const parsed = [];
 
       for (let r = 1; r < lines.length; r++) {
-        // Simple CSV splitter handling quoted values
         const rowVals = lines[r].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) =>
           v.trim().replace(/^"|"$/g, '')
         );
@@ -740,7 +1099,6 @@ export default function WorkbenchPage() {
           rowObj[h] = rowVals[idx];
         });
 
-        // Validate categorical traits
         const traitIndices = [];
         for (let tIdx = 0; tIdx < traits.length; tIdx++) {
           const t = traits[tIdx];
@@ -760,7 +1118,6 @@ export default function WorkbenchPage() {
           }
         }
 
-        // Validate vitals if synthetic
         let vitals = null;
         if (datasetMode === 'synthetic') {
           vitals = [];
@@ -805,7 +1162,6 @@ export default function WorkbenchPage() {
     const labels = currentMeta.labels;
 
     const outResults = batchParsedRows.map((item) => {
-      // 1. Gower
       const gDists = !isSynthetic
         ? gowerDistance(item.traits, dbRows, nTraits, nRows)
         : gowerDistance(
@@ -820,7 +1176,6 @@ export default function WorkbenchPage() {
           );
       const gTop = topK(gDists, 1);
 
-      // 2. Euclidean Mode
       const eDists = !isSynthetic
         ? euclideanModeImpute(item.traits, dbRows, traits, precomputed.modes, nRows)
         : euclideanModeImpute(
@@ -837,7 +1192,6 @@ export default function WorkbenchPage() {
           );
       const eTop = topK(eDists, 1);
 
-      // 3. Cosine Mode
       const cDists = !isSynthetic
         ? cosineModeImpute(item.traits, dbRows, traits, precomputed.modes, nRows)
         : cosineModeImpute(
@@ -927,32 +1281,47 @@ export default function WorkbenchPage() {
             <button
               type="button"
               onClick={() => setActiveTab('single')}
-              className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+              className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
                 activeTab === 'single'
-                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30'
+                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
                   : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
               }`}
             >
-              Single Case Entry
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Patient Intake &amp; Recommendations</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('diagnostics')}
+              className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
+                activeTab === 'diagnostics'
+                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
+                  : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
+              }`}
+            >
+              <Scale className="h-3.5 w-3.5" />
+              <span>Metric Diagnostics &amp; MDS</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('batch')}
-              className={`rounded px-3 py-1.5 text-xs font-medium transition ${
+              className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
                 activeTab === 'batch'
-                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30'
+                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
                   : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
               }`}
             >
-              Batch Mode (CSV)
+              <Upload className="h-3.5 w-3.5" />
+              <span>Batch Mode (CSV)</span>
             </button>
           </div>
         </div>
 
         <p className="text-xs text-neutral-500 leading-relaxed max-w-3xl">
-          Evaluate case similarity, nearest neighbour retrieval, and unsupervised clustering
-          across Gower, Euclidean, and Cosine metrics. All computation executes locally inside your
-          browser (Rule R13: zero user data transmitted).
+          Create patient clinical profiles, predict constitutional phenotype consensus across 1,200
+          historical cohort records using Gower, Euclidean, and Cosine distance metrics, and receive
+          literature-grounded Ayurvedic lifestyle and dietary recommendations. All calculations
+          execute locally in your browser (Rule R13: zero user data transmitted).
         </p>
       </div>
 
@@ -995,7 +1364,7 @@ export default function WorkbenchPage() {
           </div>
         </div>
 
-        {activeTab === 'single' && (
+        {activeTab !== 'batch' && (
           <div className="flex items-center gap-3 text-xs text-neutral-600">
             <span>
               Traits entered:{' '}
@@ -1025,35 +1394,150 @@ export default function WorkbenchPage() {
       )}
 
       {/* ==================================================================== */}
-      {/* SINGLE CASE TAB */}
+      {/* PATIENT INTAKE & RECOMMENDATIONS TAB (activeTab === 'single')        */}
       {/* ==================================================================== */}
       {activeTab === 'single' && (
         <div className="space-y-6">
-          {/* Controls Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded border border-neutral-200">
+          {/* Patient Demographic Profile Intake Card */}
+          <div className="paper-card p-5 space-y-4 border-teal-200/80 bg-linear-to-b from-teal-50/20 to-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 pb-3">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-teal-700" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-teal-900">
+                  Patient Clinical Profile &amp; Demographics
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-neutral-500">Record ID:</span>
+                <span className="rounded bg-teal-100/70 border border-teal-300 px-2 py-0.5 text-xs font-mono font-medium text-teal-900">
+                  {patientProfile.patientId}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateNewPatientId}
+                  className="text-[11px] text-teal-700 hover:underline font-medium"
+                >
+                  Generate ID
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-neutral-700">Patient Full Name / ID</label>
+                <input
+                  type="text"
+                  value={patientProfile.name}
+                  onChange={(e) => handleProfileChange('name', e.target.value)}
+                  placeholder="e.g. S. Sharma"
+                  className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-neutral-700">Age (years)</label>
+                <input
+                  type="number"
+                  value={patientProfile.age}
+                  onChange={(e) => handleProfileChange('age', e.target.value)}
+                  placeholder="e.g. 38"
+                  className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs num text-neutral-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-neutral-700">Biological Sex</label>
+                <select
+                  value={patientProfile.gender}
+                  onChange={(e) => handleProfileChange('gender', e.target.value)}
+                  className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+                >
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Other">Other</option>
+                  <option value="Unspecified">Unspecified</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-neutral-700">Nearest Neighbours (k)</label>
+                <select
+                  id="k-selector"
+                  value={kParam}
+                  onChange={(e) => setKParam(Number(e.target.value))}
+                  className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs num font-medium text-neutral-800"
+                >
+                  {[1, 3, 5, 7, 10].map((val) => (
+                    <option key={val} value={val}>
+                      k = {val} historical records
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-neutral-700">Chief Complaint &amp; Clinical Notes</label>
+              <textarea
+                rows={2}
+                value={patientProfile.chiefComplaint}
+                onChange={(e) => handleProfileChange('chiefComplaint', e.target.value)}
+                placeholder="Describe current clinical symptoms, digestive irregularities, sleep complaints, or stress factors..."
+                className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-neutral-800"
+              />
+            </div>
+          </div>
+
+          {/* Quick Presets & Controls Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded border border-neutral-200">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={handleRunRetrieval}
-                className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800 shadow-sm transition"
+                className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800 shadow-sm transition"
               >
                 <Play className="h-3.5 w-3.5 fill-current" />
                 Run Retrieval
               </button>
 
+              <span className="text-neutral-300">|</span>
+
+              <span className="text-[11px] font-medium text-neutral-500">Presets:</span>
               <button
                 type="button"
-                onClick={handleFillRandom}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+                onClick={() => handleLoadPreset('vata')}
+                className="inline-flex items-center gap-1 rounded border border-sky-200 bg-sky-50/60 px-2.5 py-1 text-xs font-medium text-sky-800 hover:bg-sky-100 transition"
               >
-                <Shuffle className="h-3.5 w-3.5 text-neutral-500" />
-                Fill Random
+                Vata
               </button>
+              <button
+                type="button"
+                onClick={() => handleLoadPreset('pitta')}
+                className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50/60 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition"
+              >
+                Pitta
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadPreset('kapha')}
+                className="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 transition"
+              >
+                Kapha
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLoadPreset('dual')}
+                className="inline-flex items-center gap-1 rounded border border-purple-200 bg-purple-50/60 px-2.5 py-1 text-xs font-medium text-purple-800 hover:bg-purple-100 transition"
+              >
+                Vata+Pitta
+              </button>
+
+              <span className="text-neutral-300">|</span>
 
               <button
                 type="button"
                 onClick={() => handleLoadExample(0)}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
               >
                 <FolderOpen className="h-3.5 w-3.5 text-neutral-500" />
                 Load Example #1
@@ -1061,71 +1545,67 @@ export default function WorkbenchPage() {
 
               <button
                 type="button"
+                onClick={handleFillRandom}
+                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+              >
+                <Shuffle className="h-3.5 w-3.5 text-neutral-500" />
+                Fill Random
+              </button>
+
+              <button
+                type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 rounded border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition"
               >
                 <RotateCcw className="h-3.5 w-3.5 text-neutral-400" />
                 Reset
               </button>
             </div>
 
-            {/* k and Save Case */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-neutral-600">
-                <label htmlFor="k-selector" className="font-medium">
-                  Neighbours (k):
-                </label>
-                <select
-                  id="k-selector"
-                  value={kParam}
-                  onChange={(e) => setKParam(Number(e.target.value))}
-                  className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs num font-medium text-neutral-800"
-                >
-                  {[1, 3, 5, 7, 10].map((val) => (
-                    <option key={val} value={val}>
-                      {val}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  placeholder="Case name (optional)"
-                  value={caseNameInput}
-                  onChange={(e) => setCaseNameInput(e.target.value)}
-                  className="rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-800 placeholder-neutral-400 w-36"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveCase}
-                  className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-                  title="Save case to browser localStorage"
-                >
-                  <Save className="h-3.5 w-3.5 text-neutral-500" />
-                  Save
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Case name (optional)"
+                value={caseNameInput}
+                onChange={(e) => setCaseNameInput(e.target.value)}
+                className="rounded border border-neutral-300 px-2.5 py-1 text-xs text-neutral-800 placeholder-neutral-400 w-36"
+              />
+              <button
+                type="button"
+                onClick={handleSaveCase}
+                className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                title="Save case to browser localStorage"
+              >
+                <Save className="h-3.5 w-3.5 text-neutral-500" />
+                Save Patient
+              </button>
             </div>
           </div>
 
-          {/* Saved Cases Drawer (if any exist) */}
+          {/* Saved Cases Registry Drawer (if any exist) */}
           {savedCases.length > 0 && (
             <div className="paper-card p-3 bg-neutral-50/50">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-200 text-xs">
                 <span className="font-semibold text-neutral-700">
-                  Saved Local Cases ({savedCases.length})
+                  Saved Patient Registry ({savedCases.length} records in local storage)
                 </span>
-                <span className="text-[11px] text-neutral-400">Stored in browser localStorage</span>
+                <span className="text-[11px] text-neutral-400">Stored strictly in browser localStorage</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {savedCases.map((sc) => (
                   <div
                     key={sc.id}
-                    className="inline-flex items-center gap-2 rounded border border-neutral-200 bg-white px-2.5 py-1 text-xs text-neutral-800 shadow-sm"
+                    className="inline-flex items-center gap-2 rounded border border-neutral-200 bg-white px-2.5 py-1 text-xs text-neutral-800 shadow-xs"
                   >
-                    <span className="font-medium">{sc.name}</span>
+                    <span className="font-semibold text-teal-900">{sc.name}</span>
+                    {sc.predictedClass && (
+                      <span
+                        className="rounded px-1.5 py-0.2 text-[10px] font-semibold text-white"
+                        style={{ backgroundColor: DOSHA_PALETTE[sc.predictedClass] || '#666' }}
+                      >
+                        {sc.predictedClass}
+                      </span>
+                    )}
                     <span className="text-[10px] text-neutral-400 num">
                       {sc.enteredCount}/29 traits
                     </span>
@@ -1298,7 +1778,7 @@ export default function WorkbenchPage() {
           </div>
 
           {/* ================================================================ */}
-          {/* RESULTS PANEL */}
+          {/* RESULTS PANEL: PREDICTION & RECOMMENDATIONS                      */}
           {/* ================================================================ */}
           {results && (
             <div className="space-y-6 pt-4 border-t border-neutral-200">
@@ -1310,36 +1790,456 @@ export default function WorkbenchPage() {
                 </span>
               </div>
 
-              {/* Agreement Banner */}
-              <div
-                className={`paper-card p-4 flex flex-wrap items-center justify-between gap-3 ${
-                  results.allAgreeTop1 ? 'border-teal-300 bg-teal-50/40' : 'border-neutral-200'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  {results.allAgreeTop1 ? (
-                    <CheckCircle2 className="h-5 w-5 text-teal-700" />
-                  ) : (
-                    <Info className="h-5 w-5 text-neutral-500" />
-                  )}
-                  <div>
-                    <h3 className="text-sm font-semibold text-neutral-900">
-                      {results.allAgreeTop1
-                        ? `All 3 metrics agree on #1 nearest neighbour (Record #${results.top1Gower})`
-                        : `Metric divergence: #1 neighbour differs across metrics (Gower: #${results.top1Gower}, Euclidean: #${results.top1Euclid}, Cosine: #${results.top1Cosine})`}
-                    </h3>
-                    <p className="text-xs text-neutral-600">
-                      Top-{kParam} overlap: Euclidean shares {results.euclidOverlap} of {kParam} with
-                      Gower; Cosine shares {results.cosineOverlap} of {kParam} with Gower.
+              {/* Patient Case Identity Banner */}
+              <div className="paper-card p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-teal-500 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider text-slate-950 uppercase">
+                      Patient Record #{patientProfile.patientId}
+                    </span>
+                    <span className="text-xs text-slate-300 font-medium">
+                      {patientProfile.name || 'Anonymous Patient'} ({patientProfile.age || '—'} yrs · {patientProfile.gender})
+                    </span>
+                  </div>
+                  {patientProfile.chiefComplaint && (
+                    <p className="text-xs text-slate-400 italic">
+                      &quot;{patientProfile.chiefComplaint}&quot;
                     </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrintReport}
+                    className="inline-flex items-center gap-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-teal-400" />
+                    Print / PDF Report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportJSON}
+                    className="inline-flex items-center gap-1.5 rounded bg-teal-600 hover:bg-teal-500 px-3 py-1.5 text-xs font-medium text-white transition shadow-sm"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export Case JSON
+                  </button>
+                </div>
+              </div>
+
+              {/* Executive Consensus Phenotype Prediction Card */}
+              <div className="paper-card p-6 border-teal-300/80 bg-linear-to-r from-teal-50/50 via-white to-slate-50/50 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 pb-3">
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-800">
+                      Historical Dataset Phenotype Consensus (kNN vote, k={kParam})
+                    </span>
+                    <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2 mt-0.5">
+                      <span>Predicted Constitutional Phenotype:</span>
+                      <span
+                        className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded text-sm font-bold text-white shadow-xs"
+                        style={{ backgroundColor: DOSHA_PALETTE[results.primaryConsensusClass] || '#0F766E' }}
+                      >
+                        {results.primaryConsensusClass}
+                        {results.literatureRecommendations?.sanskritName && (
+                          <span className="opacity-80 text-xs font-normal">
+                            ({results.literatureRecommendations.sanskritName})
+                          </span>
+                        )}
+                      </span>
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-teal-100 border border-teal-300 px-3 py-1 text-xs font-bold text-teal-900">
+                      {results.consensusConfidence}% Cohort Confidence
+                    </span>
                   </div>
                 </div>
 
-                {results.gower.tieCount > 1 && (
-                  <span className="rounded bg-amber-100 border border-amber-200 px-2.5 py-1 text-xs text-amber-900">
-                    {results.gower.tieCount} database records tied at rank {kParam} (lowest index selected)
+                {/* Symmetrical Multi-Metric Consensus Breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div className="rounded border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-teal-900">Gower Consensus</span>
+                      <span className="text-[10px] text-neutral-400">Mixed Categorical</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="font-medium text-neutral-700">Winner: {results.gowerWinner}</span>
+                      <span className="num font-semibold text-teal-800">
+                        {results.gowerVote[results.gowerWinner] || 0} / {kParam} votes
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-neutral-900">Euclidean (mode-imp)</span>
+                      <span className="text-[10px] text-neutral-400">One-Hot + Z-score</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="font-medium text-neutral-700">Winner: {results.euclidWinner}</span>
+                      <span className="num font-semibold text-neutral-800">
+                        {results.euclidVote[results.euclidWinner] || 0} / {kParam} votes
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-neutral-200 bg-white p-3 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-neutral-900">Cosine (mode-imp)</span>
+                      <span className="text-[10px] text-neutral-400">Angular Distance</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="font-medium text-neutral-700">Winner: {results.cosineWinner}</span>
+                      <span className="num font-semibold text-neutral-800">
+                        {results.cosineVote[results.cosineWinner] || 0} / {kParam} votes
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-neutral-600 bg-neutral-50 p-2.5 rounded border border-neutral-200">
+                  {results.metricsConsensusAgree ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>
+                        Full three-metric consensus: Gower, Euclidean, and Cosine all retrieve{' '}
+                        <strong>{results.primaryConsensusClass}</strong> as the dominant plurality class.
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Info className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>
+                        Metric divergence detected: Gower points to {results.gowerWinner}, Euclidean to{' '}
+                        {results.euclidWinner}, and Cosine to {results.cosineWinner}.
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Phenotypic Concordance & Trait Deviations Breakdown */}
+              <div className="paper-card p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-teal-700" />
+                      <span>Phenotypic Concordance &amp; Archetype Deviations</span>
+                    </h3>
+                    <p className="text-[11px] text-neutral-500">
+                      Compares patient traits against the statistical archetype mode of{' '}
+                      {results.primaryConsensusClass} in the 1,200 cohort.
+                    </p>
+                  </div>
+                  <span className="rounded bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+                    {results.concordancePct}% Archetype Alignment
                   </span>
-                )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Concordant Traits */}
+                  <div className="rounded border border-emerald-200 bg-emerald-50/30 p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs border-b border-emerald-100 pb-1.5">
+                      <span className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                        <Check className="h-3.5 w-3.5 text-emerald-600" />
+                        Concordant Archetype Traits ({results.concordantTraits.length})
+                      </span>
+                      <span className="text-[10px] text-emerald-700">Aligned with historical mode</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                      {results.concordantTraits.map((ct) => (
+                        <span
+                          key={ct.trait}
+                          className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-900 border border-emerald-200 shadow-2xs"
+                          title={`${ct.trait}: ${ct.level} (${ct.percent}% of cohort)`}
+                        >
+                          <span className="text-neutral-500">{ct.trait}:</span>
+                          <strong>{ct.level}</strong>
+                        </span>
+                      ))}
+                      {results.concordantTraits.length === 0 && (
+                        <span className="text-xs text-neutral-400 italic">No traits matching archetype mode.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Atypical Deviations */}
+                  <div className="rounded border border-amber-200 bg-amber-50/30 p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs border-b border-amber-100 pb-1.5">
+                      <span className="font-semibold text-amber-900 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                        Atypical Deviations &amp; Secondary Traits ({results.atypicalTraits.length})
+                      </span>
+                      <span className="text-[10px] text-amber-700">Potential secondary Dosha (Vikriti)</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+                      {results.atypicalTraits.map((at) => (
+                        <span
+                          key={at.trait}
+                          className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] text-amber-900 border border-amber-200 shadow-2xs"
+                          title={`Patient: ${at.patientLevel} vs Typical Mode: ${at.archetypeLevel} (${at.percent}%)`}
+                        >
+                          <span className="text-neutral-500">{at.trait}:</span>
+                          <strong className="text-neutral-800">{at.patientLevel}</strong>
+                          <span className="text-[10px] text-amber-700">(mode: {at.archetypeLevel})</span>
+                        </span>
+                      ))}
+                      {results.atypicalTraits.length === 0 && (
+                        <span className="text-xs text-neutral-400 italic">No atypical deviations observed.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Classical Literature-Guided Lifestyle & Dietary Recommendations */}
+              {results.literatureRecommendations && (
+                <div className="paper-card p-6 space-y-5 border-teal-200/90 bg-linear-to-b from-white to-teal-50/15">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-teal-700" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-teal-950">
+                          Constitutional Harmonization &amp; Recommendations (Traditional Literature Reference)
+                        </h3>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                        Synthesized from classical Charaka Samhita and Ashtanga Hridaya principles for{' '}
+                        <strong>{results.primaryConsensusClass}</strong> constitution.
+                      </p>
+                    </div>
+                    <span className="rounded bg-teal-100/70 border border-teal-300 px-2 py-0.5 text-[10px] font-semibold text-teal-900">
+                      Non-Prescriptive Educational Reference
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Ahara (Dietary Guidance) */}
+                    <div className="rounded border border-neutral-200 bg-white p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+                        <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                          <Heart className="h-3.5 w-3.5 text-rose-600" />
+                          Ahara (Dietary Harmonization)
+                        </span>
+                        <span className="text-[10px] text-neutral-500">Thermal &amp; Taste Balance</span>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-neutral-700">
+                        <div>
+                          <strong className="text-neutral-900">Favored Tastes:</strong>{' '}
+                          <span className="text-teal-800 font-medium">
+                            {results.literatureRecommendations.ahara.favoredTastes}
+                          </span>
+                        </div>
+                        <div>
+                          <strong className="text-neutral-900">Minimize Tastes:</strong>{' '}
+                          <span className="text-rose-700 font-medium">
+                            {results.literatureRecommendations.ahara.avoidTastes}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[11px] font-semibold text-neutral-800">Dietary Principles:</span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-neutral-600">
+                          {results.literatureRecommendations.ahara.dietaryPrinciples.map((dp, i) => (
+                            <li key={i}>{dp}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="space-y-1 pt-1 border-t border-neutral-100">
+                        <span className="text-[11px] font-semibold text-emerald-800">Key Foods to Favor:</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-neutral-600">
+                          {results.literatureRecommendations.ahara.foodsToFavor.slice(0, 4).map((f, i) => (
+                            <li key={i}>{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Vihara (Lifestyle & Dinacharya) */}
+                    <div className="rounded border border-neutral-200 bg-white p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+                        <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                          Vihara (Lifestyle &amp; Dinacharya Routine)
+                        </span>
+                        <span className="text-[10px] text-neutral-500">Circadian &amp; Physical Balance</span>
+                      </div>
+
+                      <div className="text-xs text-neutral-700 space-y-1">
+                        <div>
+                          <strong className="text-neutral-900">Circadian Timing:</strong>{' '}
+                          <span className="text-neutral-600">
+                            {results.literatureRecommendations.vihara.circadianRoutine}
+                          </span>
+                        </div>
+                        <div>
+                          <strong className="text-neutral-900">Physical Activity:</strong>{' '}
+                          <span className="text-neutral-600">
+                            {results.literatureRecommendations.vihara.exerciseGuidelines}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-[11px] font-semibold text-neutral-800">Daily Regimen Rituals:</span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-neutral-600">
+                          {results.literatureRecommendations.vihara.dailyRegimen.map((dr, i) => (
+                            <li key={i}>{dr}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="space-y-1 pt-1 border-t border-neutral-100">
+                        <span className="text-[11px] font-semibold text-sky-800">Ritucharya (Seasonal Advice):</span>
+                        <p className="text-[11px] text-neutral-600 leading-relaxed">
+                          {results.literatureRecommendations.ritucharya.seasonalAdvice}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Trait-Specific Guidance */}
+                  {results.traitSpecificGuidance.length > 0 && (
+                    <div className="pt-2 border-t border-neutral-200 space-y-2">
+                      <span className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
+                        <Stethoscope className="h-3.5 w-3.5 text-teal-700" />
+                        Personalized Clinical Adjustments (Based on Entered Functional Traits)
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {results.traitSpecificGuidance.map((tg, idx) => (
+                          <div
+                            key={idx}
+                            className="rounded border border-teal-100 bg-teal-50/40 p-2.5 text-xs space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-teal-950">{tg.title}</span>
+                              <span className="text-[10px] text-teal-700">{tg.category}</span>
+                            </div>
+                            <p className="text-[11px] text-neutral-600 leading-relaxed">
+                              {tg.recommendation}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Top Matching Historical Reference Cases */}
+              <div className="paper-card p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                      Nearest Reference Patient Cases from Historical Cohort
+                    </h3>
+                    <p className="text-[11px] text-neutral-500">
+                      The closest matching historical cases from the 1,200 database rows under Gower similarity.
+                    </p>
+                  </div>
+                  <span className="text-[11px] text-neutral-500">
+                    Outputs labelled strictly as &quot;Labels of the nearest dataset records&quot; (Rule R10)
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {results.topHistoricalMatches.map((match) => {
+                    const isExpanded = expandedHistoricalIdx === match.recordIndex;
+                    return (
+                      <div
+                        key={match.recordIndex}
+                        className="rounded border border-neutral-200 bg-white p-3 space-y-2 transition hover:border-neutral-300"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-100 num text-xs font-bold text-neutral-700">
+                              #{match.rank}
+                            </span>
+                            <div>
+                              <span className="num font-semibold text-neutral-900">
+                                Record #{match.recordIndex}
+                              </span>
+                              <span className="text-neutral-400 text-xs ml-2">
+                                (Gower metric: <strong className="num text-neutral-700">{match.distance.toFixed(4)}</strong>)
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold text-white"
+                              style={{ backgroundColor: DOSHA_PALETTE[match.label] || '#666' }}
+                            >
+                              {match.label}
+                            </span>
+                            <span className="rounded bg-teal-50 border border-teal-200 px-2 py-0.5 text-xs font-bold text-teal-800">
+                              {match.similarityPct}% Similarity
+                            </span>
+                            <span className="text-xs text-neutral-500 num">
+                              {match.matchingTraitsCount} / 29 traits
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedHistoricalIdx(isExpanded ? null : match.recordIndex)
+                              }
+                              className="text-xs text-teal-700 hover:underline font-medium inline-flex items-center gap-0.5"
+                            >
+                              {isExpanded ? 'Hide' : 'Inspect'}
+                              {isExpanded ? (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              ) : (
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expandable Trait Inspector */}
+                        {isExpanded && (
+                          <div className="pt-2 border-t border-neutral-100 max-h-56 overflow-y-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="text-neutral-500 border-b border-neutral-100 text-[11px]">
+                                  <th className="py-1">Trait</th>
+                                  <th className="py-1">Patient Value</th>
+                                  <th className="py-1">Reference #{match.recordIndex}</th>
+                                  <th className="py-1 text-center">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-50">
+                                {match.traitMatches.map((tm) => (
+                                  <tr key={tm.trait} className="hover:bg-neutral-50/50">
+                                    <td className="py-1 font-medium text-neutral-800">{tm.trait}</td>
+                                    <td className="py-1 text-neutral-600">{tm.userLevel}</td>
+                                    <td className="py-1 text-neutral-600">{tm.recLevel}</td>
+                                    <td className="py-1 text-center">
+                                      {tm.isMatch ? (
+                                        <span className="rounded bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-semibold">
+                                          Match
+                                        </span>
+                                      ) : (
+                                        <span className="rounded bg-neutral-100 text-neutral-600 px-1.5 py-0.2 text-[10px]">
+                                          Diff
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Side-by-Side Metric Nearest Neighbors Table */}
@@ -1549,7 +2449,41 @@ export default function WorkbenchPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
 
+      {/* ==================================================================== */}
+      {/* METRIC DIAGNOSTICS & MDS TAB (activeTab === 'diagnostics')           */}
+      {/* ==================================================================== */}
+      {activeTab === 'diagnostics' && (
+        <div className="space-y-6">
+          {!results && (
+            <div className="paper-card p-8 text-center space-y-3 bg-neutral-50/50">
+              <Scale className="mx-auto h-8 w-8 text-neutral-400" />
+              <h3 className="text-sm font-semibold text-neutral-800">
+                No Active Query Computed Yet
+              </h3>
+              <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                Select traits or load a preset in the Patient Intake tab, then click &quot;Run Retrieval&quot;
+                to inspect multi-metric distance projections and cluster assignments here.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  handleLoadPreset('dual');
+                  setActiveTab('single');
+                }}
+                className="rounded bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800"
+              >
+                Load Preset in Intake Studio
+              </button>
+            </div>
+          )}
+
+          {results && (
+            <div className="space-y-6">
               {/* Trait Match Matrix */}
               <div className="paper-card p-5 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
@@ -1658,7 +2592,6 @@ export default function WorkbenchPage() {
                       </p>
                     </div>
 
-                    {/* Selector */}
                     <div className="flex items-center gap-2 text-xs">
                       <select
                         value={clusteringConfig.metric}
@@ -1790,7 +2723,6 @@ export default function WorkbenchPage() {
                           }}
                         />
 
-                        {/* Database points */}
                         <Scatter
                           name="Database Records"
                           data={(
@@ -1820,7 +2752,6 @@ export default function WorkbenchPage() {
                           })}
                         </Scatter>
 
-                        {/* Query point */}
                         {results.queryCoord && (
                           <Scatter
                             name="Current Query (Centroid)"
@@ -1841,38 +2772,13 @@ export default function WorkbenchPage() {
                   </div>
                 </div>
               )}
-
-              {/* Export Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded border border-neutral-200">
-                <span className="text-xs text-neutral-600">
-                  Export query and top-{kParam} nearest neighbour outputs:
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleExportJSON}
-                    className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm transition"
-                  >
-                    <Download className="h-3.5 w-3.5 text-neutral-500" />
-                    Export JSON
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportCSV}
-                    className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm transition"
-                  >
-                    <Download className="h-3.5 w-3.5 text-neutral-500" />
-                    Export CSV
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
       )}
 
       {/* ==================================================================== */}
-      {/* BATCH MODE TAB */}
+      {/* BATCH MODE TAB (activeTab === 'batch')                               */}
       {/* ==================================================================== */}
       {activeTab === 'batch' && (
         <div className="space-y-6">

@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Activity,
   Sparkles,
+  UserPlus,
 } from 'lucide-react';
 import OverviewPage from './components/OverviewPage';
 import WorkbenchPage from './components/WorkbenchPage';
@@ -139,8 +140,8 @@ function AppLayout({ state }) {
             onClick={() => navigate('/workbench')}
             className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 text-xs font-medium text-white transition shadow-sm"
           >
-            <FlaskConical className="h-3.5 w-3.5" />
-            Launch Engine
+            <UserPlus className="h-3.5 w-3.5" />
+            Patient Intake & Predict
           </button>
           <button
             type="button"
