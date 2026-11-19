@@ -5,7 +5,7 @@ test.describe('Similarity Workbench E2E', () => {
     // Navigate to base URL and go to Workbench tab
     await page.goto('/');
     // Click Workbench in header nav or Overview "Try Similarity Workbench"
-    const wbNavBtn = page.getByRole('button', { name: 'Workbench' });
+    const wbNavBtn = page.getByRole('button', { name: 'Workbench', exact: true });
     await wbNavBtn.click();
     await expect(page.getByRole('heading', { name: 'Similarity Workbench' })).toBeVisible();
   });
@@ -118,7 +118,9 @@ test.describe('Similarity Workbench E2E', () => {
     await expect(page.getByText('Euclidean (observed-only)')).toBeVisible();
     await expect(page.getByText('Cosine (observed-only)')).toBeVisible();
   });
+});
 
+test.describe('Direct Endpoints Navigation', () => {
   test('4. Direct navigation to /data renders trait schema and class distribution', async ({ page }) => {
     await page.goto('/data');
     await expect(page.getByRole('heading', { name: 'Data', exact: true })).toBeVisible();

@@ -7,6 +7,24 @@ import {
   useLocation,
   Navigate,
 } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  Scale,
+  BarChart3,
+  Database,
+  Dna,
+  FileSpreadsheet,
+  FlaskConical,
+  Search,
+  Network,
+  CheckCircle2,
+  Sliders,
+  ShieldAlert,
+  FileDown,
+  ExternalLink,
+  Activity,
+  Sparkles,
+} from 'lucide-react';
 import OverviewPage from './components/OverviewPage';
 import WorkbenchPage from './components/WorkbenchPage';
 import DataPage from './components/DataPage';
@@ -22,20 +40,40 @@ import DiagnosticValidationPage from './components/DiagnosticValidationPage';
 import ReportsExportPage from './components/ReportsExportPage';
 import { parseCsvSummary } from './utils/distanceEngine';
 
-export const PAGES = [
-  { id: 'overview',    path: '/overview',    label: 'Overview',              icon: '🏠' },
-  { id: 'workbench',   path: '/workbench',   label: 'Workbench',              icon: '🔬' },
-  { id: 'dataset',     path: '/dataset',     label: 'Dataset Analysis',       icon: '📊' },
-  { id: 'attributes',  path: '/attributes',  label: 'Patient Attributes',     icon: '🧬' },
-  { id: 'data',        path: '/data',        label: 'Data Summary',           icon: '📋' },
-  { id: 'method',      path: '/method',      label: 'Method',                 icon: '⚙️' },
-  { id: 'results',     path: '/results',     label: 'Results',                icon: '📈' },
-  { id: 'comparison',  path: '/comparison',  label: 'Metric Comparison',      icon: '⚖️' },
-  { id: 'clustering',  path: '/clustering',  label: 'Patient Clustering',     icon: '🗂️' },
-  { id: 'validation',  path: '/validation',  label: 'Diagnostic Validation',  icon: '✅' },
-  { id: 'retrieval',   path: '/retrieval',   label: 'Retrieval',              icon: '🔍' },
-  { id: 'limitations', path: '/limitations', label: 'Limitations',            icon: '⚠️' },
-  { id: 'reports',     path: '/reports',     label: 'Reports & Export',       icon: '📄' },
+export const NAV_SECTIONS = [
+  {
+    title: 'DASHBOARD & METRICS',
+    items: [
+      { id: 'overview',    path: '/overview',    label: 'Overview',              icon: LayoutDashboard },
+      { id: 'comparison',  path: '/comparison',  label: 'Metric Comparison',      icon: Scale },
+      { id: 'results',     path: '/results',     label: 'Benchmark Results',      icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'PATIENT COHORT',
+    items: [
+      { id: 'dataset',     path: '/dataset',     label: 'Dataset Analysis',       icon: Database },
+      { id: 'attributes',  path: '/attributes',  label: 'Patient Attributes',     icon: Dna },
+      { id: 'data',        path: '/data',        label: 'Data Summary',           icon: FileSpreadsheet },
+      { id: 'clustering',  path: '/clustering',  label: 'Patient Clustering',     icon: Network },
+    ],
+  },
+  {
+    title: 'SIMILARITY ENGINE',
+    items: [
+      { id: 'workbench',   path: '/workbench',   label: 'Workbench',              icon: FlaskConical },
+      { id: 'retrieval',   path: '/retrieval',   label: 'Nearest Neighbours',     icon: Search },
+    ],
+  },
+  {
+    title: 'AUDIT & METHODOLOGY',
+    items: [
+      { id: 'validation',  path: '/validation',  label: 'Label Concordance',      icon: CheckCircle2 },
+      { id: 'method',      path: '/method',      label: 'Methodology & Controls', icon: Sliders },
+      { id: 'limitations', path: '/limitations', label: 'Limitations & Bias',     icon: ShieldAlert },
+      { id: 'reports',     path: '/reports',     label: 'Reports & Export',       icon: FileDown },
+    ],
+  },
 ];
 
 function getInitialCollapsed() {
@@ -67,110 +105,161 @@ function AppLayout({ state }) {
     });
   }
 
-  const sidebarWidth = collapsed ? 60 : 240;
+  const sidebarWidth = collapsed ? 68 : 260;
+
+  // Find active item
+  const currentPath = location.pathname === '/' ? '/overview' : location.pathname;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900">
-      {/* Sidebar with Route Navigation Endpoints */}
-      <aside
-        style={{ width: sidebarWidth }}
-        className="fixed inset-y-0 left-0 z-30 flex flex-col bg-white border-r border-neutral-200 transition-all duration-200 overflow-hidden"
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+      {/* Enterprise Top Navigation Bar */}
+      <header
+        style={{ left: sidebarWidth }}
+        className="fixed top-0 right-0 z-20 h-16 bg-white/95 backdrop-blur border-b border-slate-200/80 transition-all duration-200 flex items-center justify-between px-6 shadow-xs"
       >
-        {/* Logo + toggle row */}
-        <div className="flex items-center justify-between px-3 py-4 border-b border-neutral-200 shrink-0">
-          {!collapsed && (
-            <span className="text-xs font-semibold tracking-tight text-neutral-900 truncate leading-tight">
-              Ayurvedic Distance Benchmark
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Live Research Analytics Portal
             </span>
-          )}
-          {collapsed && (
-            <span className="w-full text-center text-xs font-bold text-teal-800 select-none">
-              ADB
-            </span>
-          )}
-          {!collapsed && (
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              aria-label="Collapse sidebar"
-              className="ml-2 shrink-0 rounded p-1 text-neutral-500 hover:bg-neutral-100 transition"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          )}
+          </div>
+          <span className="text-slate-300">|</span>
+          <span className="rounded-md bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+            N = <span className="num">1200</span> Records · <span className="num">29</span> Traits
+          </span>
+          <span className="hidden md:inline-flex rounded-md bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+            Client-Side Distance Engine v2.0
+          </span>
         </div>
 
-        {/* Expand button when collapsed */}
-        {collapsed && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/workbench')}
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 text-xs font-medium text-white transition shadow-sm"
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Launch Engine
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/reports')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition shadow-xs"
+          >
+            <FileDown className="h-3.5 w-3.5 text-slate-500" />
+            Export
+          </button>
+        </div>
+      </header>
+
+      {/* Modern Enterprise Sidebar */}
+      <aside
+        style={{ width: sidebarWidth }}
+        className="fixed inset-y-0 left-0 z-30 flex flex-col bg-slate-900 text-slate-300 border-r border-slate-800 transition-all duration-200 overflow-hidden select-none"
+      >
+        {/* Brand Header */}
+        <div className="flex items-center justify-between px-4 h-16 border-b border-slate-800 shrink-0">
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm shadow-sm">
+                AY
+              </div>
+              <div className="truncate">
+                <div className="text-xs font-bold tracking-tight text-white uppercase leading-tight">
+                  AyurSimilarity
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium leading-none">
+                  Distance Benchmark
+                </div>
+              </div>
+            </div>
+          )}
+
+          {collapsed && (
+            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm shadow-sm">
+              AY
+            </div>
+          )}
+
           <button
             type="button"
             onClick={toggleSidebar}
-            aria-label="Expand sidebar"
-            className="mx-auto mt-2 shrink-0 rounded p-1 text-neutral-500 hover:bg-neutral-100 transition"
+            aria-label="Toggle sidebar"
+            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d={collapsed ? "M6 4l4 4-4 4" : "M10 12L6 8l4-4"}
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
-        )}
+        </div>
 
-        {/* Route Nav Items */}
-        <nav className="flex flex-col gap-0.5 px-2 py-2 overflow-y-auto flex-1" aria-label="Primary navigation">
-          {PAGES.map((p) => {
-            const active =
-              location.pathname === p.path ||
-              (location.pathname === '/' && p.id === 'overview');
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => navigate(p.path)}
-                title={collapsed ? p.label : undefined}
-                className={`flex items-center gap-2 rounded px-2 py-2 text-sm font-medium transition w-full text-left ${
-                  active
-                    ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30'
-                    : 'text-neutral-600 hover:bg-neutral-100'
-                }`}
-              >
-                <span className={`shrink-0 ${collapsed ? 'mx-auto' : ''}`} aria-hidden="true">
-                  {p.icon}
-                </span>
-                {!collapsed && (
-                  <span className="truncate">{p.label}</span>
-                )}
-              </button>
-            );
-          })}
+        {/* Navigation Sections */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Primary navigation">
+          {NAV_SECTIONS.map((sec) => (
+            <div key={sec.title} className="space-y-1">
+              {!collapsed && (
+                <div className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                  {sec.title}
+                </div>
+              )}
+              {sec.items.map((p) => {
+                const Icon = p.icon;
+                const active = currentPath === p.path;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => navigate(p.path)}
+                    title={collapsed ? p.label : undefined}
+                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition w-full text-left ${
+                      active
+                        ? 'bg-emerald-600/90 text-white shadow-xs font-semibold'
+                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'} ${collapsed ? 'mx-auto' : ''}`} />
+                    {!collapsed && <span className="truncate">{p.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-        {/* Disclaimer at bottom (R11) */}
+        {/* Disclaimer Card at Sidebar Bottom */}
         {!collapsed && (
-          <div className="px-3 py-3 border-t border-neutral-200 shrink-0">
-            <p className="text-[10px] leading-tight text-neutral-400">
+          <div className="p-3 border-t border-slate-800 shrink-0 bg-slate-950/40">
+            <p className="text-[10px] leading-relaxed text-slate-400">
               Research prototype on a dataset of unverified origin. Not a diagnostic tool.
             </p>
           </div>
         )}
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content Viewport */}
       <div
         style={{ marginLeft: sidebarWidth }}
-        className="transition-all duration-200 min-h-screen"
+        className="transition-all duration-200 flex-1 pt-16 min-h-screen"
       >
-        <main className="mx-auto max-w-5xl px-6 py-8">
+        <main className="mx-auto max-w-6xl px-6 py-8">
           {state.loading && (
-            <div className="paper-card p-6 text-sm text-neutral-600">
-              Loading verified results from <code className="num">/data/</code>...
+            <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600 shadow-xs">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent mb-3" />
+              <div>Loading verified benchmark models from <code className="num font-mono">/data/</code>...</div>
             </div>
           )}
 
           {state.error && (
-            <div className="paper-card border-red-200 p-6 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 shadow-xs">
               Error loading benchmark files: {state.error}. Run{' '}
-              <code className="num">python python_benchmark/export_ui_data.py</code>.
+              <code className="num font-mono">python python_benchmark/export_ui_data.py</code>.
             </div>
           )}
 
@@ -184,6 +273,7 @@ function AppLayout({ state }) {
                     realData={state.payload.realData}
                     syntheticData={state.payload.syntheticData}
                     expertReview={state.payload.expertReview}
+                    realCases={state.payload.realCases}
                     onNavigate={(pageId) => navigate(pageId.startsWith('/') ? pageId : `/${pageId}`)}
                   />
                 }
