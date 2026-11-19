@@ -119,30 +119,36 @@ export default function OverviewPage({
       {/* Row of 4 Core Key Performance Indicators (KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1 */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col justify-between">
+        <div className="health-card p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Cohort Population</span>
-            <Database className="h-4 w-4 text-emerald-600" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">Cohort Population</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60">
+              <Database className="h-4 w-4" />
+            </div>
           </div>
           <div>
             <div className="num text-2xl font-bold text-slate-900 tracking-tight">
               {realMeta.n_rows}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Case records in <code className="num font-mono text-[11px]">{realMeta.csv_member}</code>
+              Case records in <code className="num font-mono text-[11px] text-slate-700">{realMeta.csv_member}</code>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
             <span>Phenotypic traits:</span>
-            <span className="num font-semibold text-emerald-700">{realMeta.n_categorical} Categorical</span>
+            <span className="num font-semibold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+              {realMeta.n_categorical} Categorical
+            </span>
           </div>
         </div>
 
         {/* KPI 2 */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col justify-between">
+        <div className="health-card p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Equivalence Index</span>
-            <Scale className="h-4 w-4 text-emerald-600" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">Equivalence Index</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 ring-1 ring-teal-200/60">
+              <Scale className="h-4 w-4" />
+            </div>
           </div>
           <div>
             <div className="num text-2xl font-bold text-slate-900 tracking-tight">
@@ -154,15 +160,19 @@ export default function OverviewPage({
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
             <span>Top-5 overlap:</span>
-            <span className="num font-semibold text-emerald-700">{fmt(geEquiv?.mean_top5_overlap, 4)} Monotonic</span>
+            <span className="num font-semibold text-teal-800 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60">
+              {fmt(geEquiv?.mean_top5_overlap, 4)} Monotonic
+            </span>
           </div>
         </div>
 
         {/* KPI 3 */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col justify-between">
+        <div className="health-card p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Retrieval P@5</span>
-            <Activity className="h-4 w-4 text-emerald-600" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">Retrieval P@5</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-700 ring-1 ring-sky-200/60">
+              <Activity className="h-4 w-4" />
+            </div>
           </div>
           <div>
             <div className="num text-2xl font-bold text-slate-900 tracking-tight">
@@ -181,10 +191,12 @@ export default function OverviewPage({
         </div>
 
         {/* KPI 4 */}
-        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col justify-between">
+        <div className="health-card p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider">Reviewer Audit</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">Reviewer Audit</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-200/60">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           </div>
           <div>
             <div className="text-xl font-bold text-slate-900 tracking-tight">
@@ -196,7 +208,7 @@ export default function OverviewPage({
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
             <span>Protocol state:</span>
-            <span className="rounded bg-amber-50 text-amber-800 px-1.5 py-0.5 text-[10px] font-semibold border border-amber-200/60">
+            <span className="rounded bg-amber-50 text-amber-800 px-2 py-0.5 text-[10px] font-semibold border border-amber-200/60">
               Unblinded verification
             </span>
           </div>
