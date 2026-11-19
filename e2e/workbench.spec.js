@@ -118,4 +118,18 @@ test.describe('Similarity Workbench E2E', () => {
     await expect(page.getByText('Euclidean (observed-only)')).toBeVisible();
     await expect(page.getByText('Cosine (observed-only)')).toBeVisible();
   });
+
+  test('4. Direct navigation to /data renders trait schema and class distribution', async ({ page }) => {
+    await page.goto('/data');
+    await expect(page.getByRole('heading', { name: 'Data', exact: true })).toBeVisible();
+    await expect(page.getByText('Dataset-Provided Dosha Class Distribution')).toBeVisible();
+    await expect(page.getByText('Body Size')).toBeVisible();
+  });
+
+  test('5. Direct navigation to /retrieval renders real records inspector', async ({ page }) => {
+    await page.goto('/retrieval');
+    await expect(page.getByRole('heading', { name: 'Real-Record Retrieval' })).toBeVisible();
+    await expect(page.getByLabel('Search real records')).toBeVisible();
+    await expect(page.getByText('Top-5 Nearest Neighbours by Metric')).toBeVisible();
+  });
 });

@@ -8,23 +8,29 @@ export default function RetrievalPage({ realCases }) {
   const [selectedRowIdx, setSelectedRowIdx] = useState(0);
   const [inspectedCell, setInspectedCell] = useState(null);
 
+  const records = realCases?.records || [];
+
   const filteredRecords = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return realCases.records;
-    return realCases.records.filter(
+    if (!q) return records;
+    return records.filter(
       (r) =>
-        r.case_id.toLowerCase().includes(q) ||
-        r.dataset_label.toLowerCase().includes(q) ||
-        r.traits.some((t) => t.toLowerCase().includes(q))
+        r.case_id?.toLowerCase().includes(q) ||
+        r.dataset_label?.toLowerCase().includes(q) ||
+        r.traits?.some((t) => t.toLowerCase().includes(q))
     );
-  }, [realCases.records, searchTerm]);
+  }, [records, searchTerm]);
 
-  const queryRecord = realCases.records[selectedRowIdx] || realCases.records[0];
+  const queryRecord = records[selectedRowIdx] || records[0];
 
-  const retrieval = useMemo(
-    () => retrieveTopKReal(queryRecord, realCases, 5),
-    [queryRecord, realCases]
-  );
+  const retrieval = useMemo(() => {
+    if (!queryRecord || !realCases?.categorical_cols) return null;
+    return retrieveTopKReal(queryRecord, realCases, 5);
+  }, [queryRecord, realCases]);
+
+  if (!realCases || records.length === 0 || !retrieval) {
+    return <div className="p-8 text-sm text-neutral-500">Loading real retrieval records…</div>;
+  }
 
   const ranks = [1, 2, 3, 4, 5];
 

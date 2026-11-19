@@ -8,18 +8,24 @@ function fmt(v, d = 2) {
 
 export default function DataPage({ realData, realCases, synthCsvSummary }) {
   const [search, setSearch] = useState('');
-  const meta = realData.provenance.dataset_metadata;
-  const classEntries = Object.entries(meta.class_counts);
+
+  const meta = realData?.provenance?.dataset_metadata;
+  const classEntries = Object.entries(meta?.class_counts || {});
 
   const filteredTraits = useMemo(() => {
+    const raw = realCases?.trait_summaries || [];
     const q = search.trim().toLowerCase();
-    if (!q) return realCases.trait_summaries;
-    return realCases.trait_summaries.filter(
+    if (!q) return raw;
+    return raw.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
-        t.levels.some((l) => l.level.toLowerCase().includes(q))
+        t.levels?.some((l) => l.level.toLowerCase().includes(q))
     );
-  }, [realCases.trait_summaries, search]);
+  }, [realCases?.trait_summaries, search]);
+
+  if (!realData || !realCases || !synthCsvSummary) {
+    return <div className="p-8 text-sm text-neutral-500">Loading data summary…</div>;
+  }
 
   return (
     <div className="space-y-6">

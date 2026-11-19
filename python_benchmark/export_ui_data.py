@@ -132,6 +132,50 @@ def export_records_and_metadata(
     with open(out_dir / "real_records.json", "w", encoding="utf-8") as fh:
         json.dump(real_records_obj, fh, separators=(",", ":"))
 
+    # Also build rich real_cases.json for DataPage and RetrievalPage
+    trait_summaries: List[Dict[str, Any]] = []
+    for col in cat_cols:
+        vc = X_real[col].astype(str).value_counts()
+        trait_summaries.append(
+            {
+                "name": col,
+                "n_levels": int(len(vc)),
+                "missing_count": int(X_real[col].isna().sum()),
+                "levels": [{"level": str(k), "count": int(v)} for k, v in vc.items()],
+            }
+        )
+
+    records = []
+    for i in range(len(X_real)):
+        row = X_real.iloc[i]
+        records.append(
+            {
+                "row_idx": i,
+                "case_id": f"R-{i + 1:04d}",
+                "dataset_label": str(y_real.iloc[i]),
+                "traits": [str(row[c]) for c in cat_cols],
+            }
+        )
+
+    real_cases_obj = {
+        "notice": RESEARCH_PROTOTYPE_NOTICE,
+        "seed": 42,
+        "git_commit": git_info["short_commit"],
+        "source": real_bundle.metadata.get("kaggle_slug", "adityaprashantshirke/prakriti-updated"),
+        "csv_member": real_bundle.metadata.get("csv_member", "Updated_Prakriti_With_Features.csv"),
+        "config": {"source": "Updated_Prakriti_With_Features.csv", "n_records": len(X_real)},
+        "categorical_cols": cat_cols,
+        "traits": traits_meta,
+        "classes": classes,
+        "rows": real_rows_coded,
+        "labels": real_labels_coded,
+        "trait_summaries": trait_summaries,
+        "records": records,
+    }
+
+    with open(out_dir / "real_cases.json", "w", encoding="utf-8") as fh:
+        json.dump(real_cases_obj, fh, separators=(",", ":"))
+
     # 2. Synthetic records
     synth_path = REPO_ROOT / "Dataset" / "synthetic" / "synthetic_cases_default.csv"
     if not synth_path.exists():
@@ -505,8 +549,7 @@ def export_all() -> None:
         out_dir, X_real, y_real, distance_matrices, cat_cols, classes, git_info
     )
 
-    # Also keep compact real_cases.json backward-compatible
-    shutil.copy2(out_dir / "real_records.json", out_dir / "real_cases.json")
+
 
     elapsed = (dt.datetime.now() - t_start).total_seconds()
     print(f"[export_ui_data] All UI exports completed successfully in {elapsed:.2f}s!")
