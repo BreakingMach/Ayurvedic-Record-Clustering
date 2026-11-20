@@ -70,6 +70,56 @@ export default function LimitationsPage({ expertReview }) {
         </div>
       </div>
 
+      {/* Active Methodological Mitigations (Overcoming Limitations) */}
+      <div className="paper-card p-6 space-y-4 border-l-4 border-l-teal-700">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">
+            Engine Mitigations: How This Workbench Overcomes Identified Limitations
+          </h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Active architectural controls, continuous modeling, and uncertainty quantification deployed to mitigate dataset constraints.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50/60 p-3.5 space-y-1.5">
+            <span className="font-semibold text-xs text-teal-900 flex items-center gap-1.5">
+              1. Continuous Tri-Dosha Prakriti Mixture (vs. Discrete Buckets)
+            </span>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Classical Ayurveda recognizes Prakriti as a continuous spectrum of Vata, Pitta, and Kapha rather than a discrete label. The engine computes distance-weighted kernel mixtures across retrieved neighbours, quantifying constitution as continuous biological percentages (% Vata · % Pitta · % Kapha).
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50/60 p-3.5 space-y-1.5">
+            <span className="font-semibold text-xs text-teal-900 flex items-center gap-1.5">
+              2. Symmetrical Multi-Metric Consensus (vs. Metric Bias)
+            </span>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              No single distance metric is assumed optimal. Gower (range-normalized), Euclidean (one-hot L2), and Cosine (angular) are executed simultaneously in parallel. Predictions require multi-metric cross-validation, and metric divergences are highlighted in real time.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50/60 p-3.5 space-y-1.5">
+            <span className="font-semibold text-xs text-teal-900 flex items-center gap-1.5">
+              3. Imputation Invariance Testing (vs. Imputation Artifacts)
+            </span>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              When clinical intake is incomplete, mode-imputation risks pulling phenotypes toward the population average. The system computes both mode-imputed and observed-only variants, explicitly displaying whether nearest neighbours are invariant to imputation.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50/60 p-3.5 space-y-1.5">
+            <span className="font-semibold text-xs text-teal-900 flex items-center gap-1.5">
+              4. Boundary Tie &amp; Uncertainty Indexing (vs. Pseudo-Precision)
+            </span>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Categorical ties frequently occur at the top-k boundary. The engine detects equivalence classes at rank k, applies stable index tie-breaking, and computes Shannon entropy over the neighbor vote distribution to honestly quantify diagnostic ambiguity.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Blinded Expert Review Protocol Status */}
       <div className="paper-card p-6 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

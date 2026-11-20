@@ -33,10 +33,10 @@ export default function DataPage({ realData, realCases, synthCsvSummary }) {
         <h1 className="text-xl font-semibold text-neutral-900">Data</h1>
         <p className="mt-2 text-sm text-neutral-600">
           Class distribution and real trait schema for{' '}
-          <code className="num text-xs">{meta.csv_member}</code> (
-          <span className="num">{meta.n_rows}</span> rows,{' '}
-          <span className="num">{meta.duplicate_row_count}</span> exact duplicate at row index{' '}
-          <span className="num">{meta.duplicate_row_indices.join(', ')}</span> retained), followed
+          <code className="num text-xs">{meta?.csv_member || 'real_records.csv'}</code> (
+          <span className="num">{meta?.n_rows || '—'}</span> rows,{' '}
+          <span className="num">{meta?.duplicate_row_count || 0}</span> exact duplicate at row index{' '}
+          <span className="num">{meta?.duplicate_row_indices?.join(', ') || '—'}</span> retained), followed
           by the default simulated mixed-type cohort.
         </p>
       </div>

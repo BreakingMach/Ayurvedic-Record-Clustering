@@ -35,14 +35,11 @@ export default function OverviewPage({
     (e) => e.metric_a === 'gower' && e.metric_b === 'euclidean'
   );
 
-  const d0Cell = syntheticData?.cells?.[syntheticData.sweeps.numeric_cohens_d.cell_ids[0]];
-  const d2Cell =
-    syntheticData?.cells?.[
-      syntheticData.sweeps.numeric_cohens_d.cell_ids[
-        syntheticData.sweeps.numeric_cohens_d.cell_ids.length - 1
-      ]
-    ];
-  const out05Cell = syntheticData?.cells?.[syntheticData.sweeps.outlier_fraction.cell_ids[1]];
+  const sweepD = syntheticData?.sweeps?.numeric_cohens_d?.cell_ids;
+  const d0Cell = sweepD ? syntheticData?.cells?.[sweepD[0]] : null;
+  const d2Cell = sweepD ? syntheticData?.cells?.[sweepD[sweepD.length - 1]] : null;
+  const outCellIds = syntheticData?.sweeps?.outlier_fraction?.cell_ids;
+  const out05Cell = outCellIds ? syntheticData?.cells?.[outCellIds[1]] : null;
 
   const classEntries = Object.entries(realMeta.class_counts || {});
 

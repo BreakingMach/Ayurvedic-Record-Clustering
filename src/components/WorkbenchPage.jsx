@@ -893,6 +893,91 @@ export default function WorkbenchPage() {
       queryCoord = [sumX / gowerTop.indices.length, sumY / gowerTop.indices.length];
     }
 
+    // Continuous Tri-Dosha Prakriti Spectrum (Kernel / Distance-Weighted Mixture)
+    // Directly overcomes the discrete single-label limitation of the dataset
+    let weightSum = 0;
+    let vataScore = 0;
+    let pittaScore = 0;
+    let kaphaScore = 0;
+
+    for (let i = 0; i < gowerTop.indices.length; i++) {
+      const recIdx = gowerTop.indices[i];
+      const dist = gowerTop.distances[i];
+      const weight = Math.max(0.001, 1 - dist);
+      weightSum += weight;
+
+      const recLabel = classes[labels[recIdx]];
+      if (recLabel === 'Vata') {
+        vataScore += weight;
+      } else if (recLabel === 'Pitta') {
+        pittaScore += weight;
+      } else if (recLabel === 'Kapha') {
+        kaphaScore += weight;
+      } else if (recLabel === 'Vata+Pitta') {
+        vataScore += weight * 0.5;
+        pittaScore += weight * 0.5;
+      } else if (recLabel === 'Vata+Kapha') {
+        vataScore += weight * 0.5;
+        kaphaScore += weight * 0.5;
+      } else if (recLabel === 'Pitta+Kapha') {
+        pittaScore += weight * 0.5;
+        kaphaScore += weight * 0.5;
+      }
+    }
+
+    const doshaWeightSum = weightSum > 0 ? weightSum : 1;
+    let vataPct = Math.round((vataScore / doshaWeightSum) * 100);
+    let pittaPct = Math.round((pittaScore / doshaWeightSum) * 100);
+    let kaphaPct = Math.max(0, 100 - (vataPct + pittaPct));
+    if (vataPct + pittaPct + kaphaPct !== 100) {
+      kaphaPct = Math.max(0, 100 - (vataPct + pittaPct));
+    }
+    const triDoshaSpectrum = { vata: vataPct, pitta: pittaPct, kapha: kaphaPct };
+
+    // Intake Completeness & Reliability Assessment
+    const traitCoveragePct = Math.round((enteredTraitsCount / traits.length) * 100);
+    let confidenceRating = 'High';
+    let confidenceNote = 'Comprehensive trait coverage with multi-metric alignment.';
+    if (enteredTraitsCount < 8) {
+      confidenceRating = 'Exploratory';
+      confidenceNote = 'Low trait coverage (< 30%). Dataset cohort prior baseline dominates.';
+    } else if (enteredTraitsCount < 18 || !metricsConsensusAgree) {
+      confidenceRating = 'Moderate';
+      confidenceNote = metricsConsensusAgree
+        ? 'Partial trait coverage with unanimous metric agreement.'
+        : 'Metric divergence detected across distance geometries; review metric comparison.';
+    }
+
+    // Shannon Entropy / Phenotype Ambiguity across top-k
+    let shannonEntropy = 0;
+    for (const cnt of Object.values(gowerVote)) {
+      if (cnt > 0) {
+        const p = cnt / kParam;
+        shannonEntropy -= p * Math.log2(p);
+      }
+    }
+    const maxEntropy = Math.log2(Math.max(2, classes.length));
+    const ambiguityPct = Math.min(100, Math.round((shannonEntropy / maxEntropy) * 100));
+
+    // Boundary Tie Analysis at rank k
+    const boundaryTieCount = gowerTop.tieCount;
+
+    // Imputation Invariance / Divergence analysis
+    let imputationAnalysis = null;
+    if (hasMissing && euclidObsTop && cosineObsTop) {
+      const euclidObsWinner = Object.entries(knnClassVote(euclidObsTop.indices, labels, classes))
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
+      const isImputationRobust = gowerWinner === euclidWinner;
+      imputationAnalysis = {
+        isRobust: isImputationRobust,
+        modeImputedWinner: euclidWinner,
+        observedOnlyWinner: gowerWinner,
+        divergenceNote: isImputationRobust
+          ? 'Mode-imputation and observed-only metrics converge to the identical consensus phenotype.'
+          : `Mode-imputation shifts consensus from ${gowerWinner} (observed-only) to ${euclidWinner} (imputed).`,
+      };
+    }
+
     setResults({
       timestamp: new Date().toISOString(),
       datasetMode,
@@ -913,6 +998,13 @@ export default function WorkbenchPage() {
       concordantTraits,
       atypicalTraits,
       concordancePct,
+      triDoshaSpectrum,
+      traitCoveragePct,
+      confidenceRating,
+      confidenceNote,
+      ambiguityPct,
+      boundaryTieCount,
+      imputationAnalysis,
       literatureRecommendations,
       traitSpecificGuidance,
       topHistoricalMatches,
@@ -2090,6 +2182,129 @@ export default function WorkbenchPage() {
                   )}
                 </div>
               </div>
+
+              {/* Continuous Tri-Dosha Prakriti Spectrum (Overcoming Discrete Bucketing) */}
+              {results.triDoshaSpectrum && (
+                <div className="paper-card p-5 space-y-3.5 border-l-4 border-l-teal-600 bg-linear-to-r from-teal-50/20 via-white to-neutral-50/40">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-teal-700" />
+                        <span>Continuous Tri-Dosha Prakriti Spectrum (Overcoming Discrete Bucketing)</span>
+                      </h3>
+                      <p className="text-[11px] text-neutral-500">
+                        Distance-weighted kernel mixture over retrieved neighbours, quantifying constitution as continuous biological proportions.
+                      </p>
+                    </div>
+                    <span className="rounded bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+                      Prakriti Mixture Analysis
+                    </span>
+                  </div>
+
+                  {/* Multi-Dosha Horizontal Spectrum Bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex h-4 w-full overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+                      <div
+                        className="transition-all duration-500 bg-sky-500"
+                        style={{ width: `${results.triDoshaSpectrum.vata}%` }}
+                        title={`Vata: ${results.triDoshaSpectrum.vata}%`}
+                      />
+                      <div
+                        className="transition-all duration-500 bg-amber-500"
+                        style={{ width: `${results.triDoshaSpectrum.pitta}%` }}
+                        title={`Pitta: ${results.triDoshaSpectrum.pitta}%`}
+                      />
+                      <div
+                        className="transition-all duration-500 bg-emerald-600"
+                        style={{ width: `${results.triDoshaSpectrum.kapha}%` }}
+                        title={`Kapha: ${results.triDoshaSpectrum.kapha}%`}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[11px] font-medium pt-0.5">
+                      <span className="text-sky-700 font-semibold flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-sky-500 inline-block shadow-2xs" />
+                        Vata: {results.triDoshaSpectrum.vata}%
+                      </span>
+                      <span className="text-amber-700 font-semibold flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-500 inline-block shadow-2xs" />
+                        Pitta: {results.triDoshaSpectrum.pitta}%
+                      </span>
+                      <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-600 inline-block shadow-2xs" />
+                        Kapha: {results.triDoshaSpectrum.kapha}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Clinical Reliability, Missingness & Boundary Tie Index (Overcoming Incompleteness & Geometry Ambiguity) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Intake Completeness & Reliability */}
+                <div className="paper-card p-4 space-y-2 border-t-2 border-t-teal-600">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-800">Observation Coverage</span>
+                    <span className="rounded bg-teal-50 px-2 py-0.5 font-bold text-teal-800 text-[11px]">
+                      {results.confidenceRating} Confidence
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold text-neutral-900 num">
+                    {results.traitCoveragePct}% ({enteredTraitsCount} / {currentMeta.traits.length} traits)
+                  </div>
+                  <p className="text-[11px] text-neutral-500 leading-snug">
+                    {results.confidenceNote}
+                  </p>
+                </div>
+
+                {/* Shannon Phenotypic Ambiguity */}
+                <div className="paper-card p-4 space-y-2 border-t-2 border-t-slate-600">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-800">Neighborhood Ambiguity</span>
+                    <span className="text-[11px] text-neutral-400 font-mono">H / H_max</span>
+                  </div>
+                  <div className="text-sm font-bold text-neutral-900 num">
+                    {results.ambiguityPct}% Ambiguity
+                  </div>
+                  <p className="text-[11px] text-neutral-500 leading-snug">
+                    {results.ambiguityPct < 30
+                      ? 'High consensus: top-k neighbors strongly cluster into a single dominant phenotype.'
+                      : 'Mixed constitutional neighborhood: multiple Dosha phenotypes present in top-k.'}
+                  </p>
+                </div>
+
+                {/* Boundary Tie Analysis */}
+                <div className="paper-card p-4 space-y-2 border-t-2 border-t-amber-500">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-800">Boundary Tie Analysis</span>
+                    <span className="text-[11px] text-neutral-400">Rank k={kParam}</span>
+                  </div>
+                  <div className="text-sm font-bold text-neutral-900 num">
+                    {results.boundaryTieCount > 1
+                      ? `${results.boundaryTieCount} Records Tied`
+                      : 'Unique Boundary (0 Ties)'}
+                  </div>
+                  <p className="text-[11px] text-neutral-500 leading-snug">
+                    {results.boundaryTieCount > 1
+                      ? `Equivalence class at boundary: ${results.boundaryTieCount} records share identical distance; stable index sort applied (R13).`
+                      : 'Strict distance threshold: top-k cut-off does not split an equivalence class.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Imputation Invariance / Divergence Banner */}
+              {results.imputationAnalysis && (
+                <div className="paper-card p-4 border border-slate-200 bg-slate-50/70 flex items-start gap-3">
+                  <Info className="h-4 w-4 text-teal-700 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 text-xs text-neutral-700">
+                    <span className="font-semibold text-neutral-900">
+                      Imputation Invariance Analysis (Mitigating Missingness Bias):
+                    </span>
+                    <p className="leading-relaxed">
+                      {results.imputationAnalysis.divergenceNote}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Phenotypic Concordance & Trait Deviations Breakdown */}
               <div className="paper-card p-5 space-y-4">

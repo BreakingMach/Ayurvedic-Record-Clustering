@@ -38,6 +38,7 @@ export default function PatientClusteringPage({ clusteringsData, embeddingsData,
     const pts = [];
     // sample every 2nd or 3rd to keep around 400-600 points, or all 1200 points
     for (let i = 0; i < coords.length; i += 2) {
+      if (!coords[i]) continue;
       const [x, y] = coords[i];
       const clusterIdx = currentClustering?.labels?.[i] ?? 0;
       const doshaIdx = realLabels[i] ?? 0;
