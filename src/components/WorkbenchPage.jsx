@@ -252,6 +252,8 @@ export default function WorkbenchPage() {
   const [matrixSortBy, setMatrixSortBy] = useState('order'); // 'order' | 'mismatches'
   const [expandedHistoricalIdx, setExpandedHistoricalIdx] = useState(null);
   const [traitFilterQuery, setTraitFilterQuery] = useState('');
+  const [isRetrieving, setIsRetrieving] = useState(false);
+  const resultsRef = useRef(null);
 
   // 5. Batch mode state
   const [batchFile, setBatchFile] = useState(null);
@@ -615,6 +617,7 @@ export default function WorkbenchPage() {
   // Run retrieval and prediction calculation
   const handleRunRetrieval = () => {
     if (!currentMeta || !precomputed) return;
+    setIsRetrieving(true);
     const { traits } = currentMeta;
     const { nTraits, nRows, dbRows } = precomputed;
 
@@ -928,6 +931,12 @@ export default function WorkbenchPage() {
       assignedClusterData,
       queryCoord,
     });
+    setIsRetrieving(false);
+    setTimeout(() => {
+      if (resultsRef.current) {
+        resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   };
 
   // Trait Match Matrix Data (sorted)
@@ -1514,9 +1523,14 @@ export default function WorkbenchPage() {
               <button
                 type="button"
                 onClick={handleRunRetrieval}
-                className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800 shadow-sm transition"
+                disabled={isRetrieving}
+                className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-50 shadow-sm transition"
               >
-                <Play className="h-3.5 w-3.5 fill-current" />
+                {isRetrieving ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                )}
                 Run Retrieval
               </button>
 
@@ -1860,11 +1874,66 @@ export default function WorkbenchPage() {
             )}
           </div>
 
+          {/* Secondary Bottom Action Bar below traits */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-neutral-50 p-4 rounded-lg border border-neutral-200">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium text-neutral-600">
+                <span className="font-semibold text-neutral-900">{enteredTraitsCount}</span> / {currentMeta.traits.length} traits selected
+              </span>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Clear All
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {results && (
+                <button
+                  type="button"
+                  onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  className="inline-flex items-center gap-1.5 rounded border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-100 transition"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Jump to Results
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleRunRetrieval}
+                disabled={isRetrieving}
+                className="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800 disabled:opacity-50 shadow-sm transition"
+              >
+                {isRetrieving ? (
+                  <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                )}
+                Calculate Consensus &amp; Recommendations
+              </button>
+            </div>
+          </div>
+
           {/* ================================================================ */}
           {/* RESULTS PANEL: PREDICTION & RECOMMENDATIONS                      */}
           {/* ================================================================ */}
           {results && (
-            <div className="space-y-6 pt-4 border-t border-neutral-200">
+            <div ref={resultsRef} id="retrieval-results" className="space-y-6 pt-4 border-t border-neutral-200 scroll-mt-20">
+              {/* Baseline Prior Explanation Banner if 0 traits entered */}
+              {enteredTraitsCount === 0 && (
+                <div className="rounded border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-amber-950">Baseline Cohort Prior Displayed (0 of {currentMeta.traits.length} Traits Entered)</p>
+                    <p className="text-amber-800 leading-relaxed">
+                      No patient physiological traits were selected. In the absence of individual phenotypic observations, retrieval distances reflect the unconditioned dataset baseline prior ({results.primaryConsensusClass}). Select specific traits above or load a clinical preset (Vata, Pitta, Kapha) to compute individualized phenotypic nearest neighbours.
+                    </p>
+                  </div>
+                </div>
+              )}
               {/* Mandatory R11 Research Prototype Banner */}
               <div className="rounded border border-neutral-300 bg-neutral-100/70 p-3 text-xs text-neutral-700 flex items-center justify-between">
                 <span className="font-medium">Notice: {R11_DISCLAIMER}</span>
@@ -3024,6 +3093,21 @@ export default function WorkbenchPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Floating Jump to Results Button */}
+      {results && activeTab === 'single' && (
+        <div className="fixed bottom-6 right-6 z-40 print:hidden">
+          <button
+            type="button"
+            onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold shadow-xl hover:bg-slate-800 border border-slate-700 transition"
+            title="Jump to consensus prediction results"
+          >
+            <ChevronDown className="h-4 w-4 text-teal-400" />
+            <span>View Results &amp; Consensus</span>
+          </button>
         </div>
       )}
     </div>

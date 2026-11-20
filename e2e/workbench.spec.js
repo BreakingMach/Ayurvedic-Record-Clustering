@@ -2,11 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Similarity Workbench E2E', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to base URL and go to Workbench tab
-    await page.goto('/');
-    // Click Workbench in header nav or Overview "Try Similarity Workbench"
-    const wbNavBtn = page.getByRole('button', { name: 'Workbench', exact: true });
-    await wbNavBtn.click();
+    // Navigate directly to /workbench endpoint
+    await page.goto('/workbench');
     await expect(page.getByRole('heading', { name: 'Similarity Workbench' })).toBeVisible();
   });
 
