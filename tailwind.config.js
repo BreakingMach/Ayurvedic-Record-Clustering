@@ -8,8 +8,8 @@ export default {
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
-        canvas: '#FAFAFA',
-        accent: '#0F766E',
+        canvas: '#F3EADF',
+        accent: '#967D63',
       },
     },
   },

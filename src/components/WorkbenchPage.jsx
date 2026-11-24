@@ -814,7 +814,7 @@ export default function WorkbenchPage() {
       const traitMatches = [];
       traits.forEach((t, tIdx) => {
         const uVal = queryTraits[tIdx];
-        const rVal = datasetMode === 'real' ? dbRows[recIdx][tIdx] : dbRows[recIdx].traits[tIdx];
+        const rVal = dbRows[recIdx]?.[tIdx];
         const isMatch = uVal !== null && uVal === rVal;
         if (isMatch) matchingTraitsCount++;
         traitMatches.push({
@@ -965,16 +965,18 @@ export default function WorkbenchPage() {
     // Imputation Invariance / Divergence analysis
     let imputationAnalysis = null;
     if (hasMissing && euclidObsTop && cosineObsTop) {
-      const euclidObsWinner = Object.entries(knnClassVote(euclidObsTop.indices, labels, classes))
-        .sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
-      const isImputationRobust = gowerWinner === euclidWinner;
+      const euclidObsWinner =
+        Object.entries(knnClassVote(euclidObsTop.indices, labels, classes))
+          .sort((a, b) => b[1] - a[1])[0]?.[0] || classes[0];
+      const isImputationRobust =
+        gowerWinner === euclidWinner && euclidObsWinner === euclidWinner;
       imputationAnalysis = {
         isRobust: isImputationRobust,
         modeImputedWinner: euclidWinner,
-        observedOnlyWinner: gowerWinner,
+        observedOnlyWinner: euclidObsWinner,
         divergenceNote: isImputationRobust
           ? 'Mode-imputation and observed-only metrics converge to the identical consensus phenotype.'
-          : `Mode-imputation shifts consensus from ${gowerWinner} (observed-only) to ${euclidWinner} (imputed).`,
+          : `Mode-imputation (${euclidWinner}) diverges from observed-only (${euclidObsWinner} / Gower: ${gowerWinner}).`,
       };
     }
 
@@ -1045,7 +1047,7 @@ export default function WorkbenchPage() {
 
       const neighborCols = topIndices.map((recIdx) => {
         let nVal;
-        if (datasetMode === 'real') {
+        if (results.datasetMode === 'real') {
           nVal = currentMeta.rows[recIdx][tIdx];
         } else {
           nVal = currentMeta.rows[recIdx].traits[tIdx];
@@ -1079,6 +1081,54 @@ export default function WorkbenchPage() {
     }
     return rows;
   }, [results, currentMeta, datasetMode, matrixSortBy]);
+
+  // Reactive cluster assignment and MDS query placement (eliminates stale closure on dropdown change)
+  const resolvedClusterData = useMemo(() => {
+    if (!results) return null;
+    const clusterMap = dataAssets.clusterings?.clusterings?.[results.datasetMode];
+    if (!clusterMap) return results.assignedClusterData;
+    const { metric, linkage, k } = clusteringConfig;
+    const targetClust = clusterMap[metric]?.[linkage]?.[String(k)];
+    if (!targetClust) return results.assignedClusterData;
+    const queryDists =
+      metric === 'gower'
+        ? results.gower?.dists
+        : metric === 'euclidean'
+          ? results.euclidMode?.dists
+          : results.cosineMode?.dists;
+    if (!queryDists) return results.assignedClusterData;
+    const assignment = clusterAssignment(queryDists, targetClust.labels, k);
+    return {
+      ...assignment,
+      k,
+      metric,
+      linkage,
+      ari: targetClust.ari,
+      nmi: targetClust.nmi,
+      clusterSizes: targetClust.cluster_sizes,
+    };
+  }, [results, clusteringConfig, dataAssets.clusterings]);
+
+  const resolvedQueryCoord = useMemo(() => {
+    if (!results) return null;
+    const { metric } = clusteringConfig;
+    const embData = dataAssets.embeddings?.datasets?.[results.datasetMode]?.[metric];
+    if (!embData) return results.queryCoord;
+    const neighborIndices =
+      metric === 'gower'
+        ? results.gower?.indices
+        : metric === 'euclidean'
+          ? results.euclidMode?.indices
+          : results.cosineMode?.indices;
+    if (!neighborIndices || neighborIndices.length === 0) return results.queryCoord;
+    let sumX = 0;
+    let sumY = 0;
+    for (const idx of neighborIndices) {
+      sumX += embData[idx][0];
+      sumY += embData[idx][1];
+    }
+    return [sumX / neighborIndices.length, sumY / neighborIndices.length];
+  }, [results, clusteringConfig, dataAssets.embeddings]);
 
   // Export JSON handler
   const handleExportJSON = () => {
@@ -1116,7 +1166,7 @@ export default function WorkbenchPage() {
           label_of_nearest_dataset_record: currentMeta.classes[currentMeta.labels[idx]],
         })),
       },
-      cluster_assignment: results.assignedClusterData,
+      cluster_assignment: resolvedClusterData || results.assignedClusterData,
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -1367,7 +1417,7 @@ export default function WorkbenchPage() {
   // -------------------------------------------------------------------------
   if (dataAssets.loading) {
     return (
-      <div className="paper-card p-6 text-sm text-neutral-600">
+      <div className="paper-card p-6 text-sm text-[#827568]">
         Loading verified benchmark records from <code className="num">/data/</code>...
       </div>
     );
@@ -1384,10 +1434,10 @@ export default function WorkbenchPage() {
   return (
     <div className="space-y-6">
       {/* Workbench Header */}
-      <div className="space-y-3 border-b border-neutral-200 pb-5">
+      <div className="space-y-3 border-b border-[#E8DED1] pb-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            <h1 className="text-xl font-semibold tracking-tight text-[#40382F]">
               Similarity Workbench
             </h1>
             {datasetMode === 'synthetic' && (
@@ -1398,14 +1448,14 @@ export default function WorkbenchPage() {
           </div>
 
           {/* Mode Switcher */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveTab('single')}
               className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
                 activeTab === 'single'
-                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
-                  : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
+                  ? 'bg-[#40382F] text-[#F3EADF] shadow-sm font-semibold'
+                  : 'bg-white text-[#827568] border border-[#E8DED1] hover:bg-[#F3EADF]/65'
               }`}
             >
               <UserPlus className="h-3.5 w-3.5" />
@@ -1416,8 +1466,8 @@ export default function WorkbenchPage() {
               onClick={() => setActiveTab('diagnostics')}
               className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
                 activeTab === 'diagnostics'
-                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
-                  : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
+                  ? 'bg-[#40382F] text-[#F3EADF] shadow-sm font-semibold'
+                  : 'bg-white text-[#827568] border border-[#E8DED1] hover:bg-[#F3EADF]/65'
               }`}
             >
               <Scale className="h-3.5 w-3.5" />
@@ -1428,8 +1478,8 @@ export default function WorkbenchPage() {
               onClick={() => setActiveTab('batch')}
               className={`rounded px-3 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
                 activeTab === 'batch'
-                  ? 'bg-teal-50 text-teal-800 ring-1 ring-teal-700/30 font-semibold'
-                  : 'bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50'
+                  ? 'bg-[#40382F] text-[#F3EADF] shadow-sm font-semibold'
+                  : 'bg-white text-[#827568] border border-[#E8DED1] hover:bg-[#F3EADF]/65'
               }`}
             >
               <Upload className="h-3.5 w-3.5" />
@@ -1438,7 +1488,7 @@ export default function WorkbenchPage() {
           </div>
         </div>
 
-        <p className="text-xs text-neutral-500 leading-relaxed max-w-3xl">
+        <p className="text-xs text-[#827568] leading-relaxed max-w-3xl">
           Create patient clinical profiles, predict constitutional phenotype consensus across 1,200
           historical cohort records using Gower, Euclidean, and Cosine distance metrics, and receive
           literature-grounded Ayurvedic lifestyle and dietary recommendations. All calculations
@@ -1449,8 +1499,8 @@ export default function WorkbenchPage() {
       {/* Dataset Toggle & Counter Bar */}
       <div className="paper-card p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-neutral-600">Active Database:</span>
-          <div className="inline-flex rounded border border-neutral-200 bg-neutral-50 p-0.5 text-xs">
+          <span className="text-xs font-medium text-[#827568]">Active Database:</span>
+          <div className="inline-flex flex-wrap rounded-xl border border-[#E8DED1] bg-[#F3EADF]/70 p-0.5 text-xs gap-0.5">
             <button
               type="button"
               onClick={() => {
@@ -1459,8 +1509,8 @@ export default function WorkbenchPage() {
               }}
               className={`rounded px-2.5 py-1 font-medium transition ${
                 datasetMode === 'real'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white text-[#40382F] shadow-sm'
+                  : 'text-[#827568] hover:text-[#40382F]'
               }`}
             >
               Real Data (29 traits, 1,200 records)
@@ -1473,8 +1523,8 @@ export default function WorkbenchPage() {
               }}
               className={`rounded px-2.5 py-1 font-medium transition flex items-center gap-1.5 ${
                 datasetMode === 'synthetic'
-                  ? 'bg-white text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  ? 'bg-white text-[#40382F] shadow-sm'
+                  : 'text-[#827568] hover:text-[#40382F]'
               }`}
             >
               <span>Simulated Mixed Data (29 traits + 4 vitals)</span>
@@ -1486,17 +1536,17 @@ export default function WorkbenchPage() {
         </div>
 
         {activeTab !== 'batch' && (
-          <div className="flex items-center gap-3 text-xs text-neutral-600">
+          <div className="flex items-center gap-3 text-xs text-[#827568]">
             <span>
               Traits entered:{' '}
-              <strong className="num text-neutral-900">
+              <strong className="num text-[#40382F]">
                 {enteredTraitsCount} of {currentMeta?.traits.length || 29}
               </strong>
             </span>
             {datasetMode === 'synthetic' && (
               <span>
                 Vitals entered:{' '}
-                <strong className="num text-neutral-900">{enteredVitalsCount} of 4</strong>
+                <strong className="num text-[#40382F]">{enteredVitalsCount} of 4</strong>
               </span>
             )}
           </div>
@@ -1520,23 +1570,23 @@ export default function WorkbenchPage() {
       {activeTab === 'single' && (
         <div className="space-y-6">
           {/* Patient Demographic Profile Intake Card */}
-          <div className="paper-card p-5 space-y-4 border-teal-200/80 bg-linear-to-b from-teal-50/20 to-white">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 pb-3">
+          <div className="paper-card p-5 space-y-4 border-[#C3A989]/55 bg-gradient-to-b from-[#F3EADF]/70 to-white/75">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DED1] pb-3">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-teal-700" />
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-teal-900">
+                <User className="h-4 w-4 text-[#967D63]" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                   Patient Clinical Profile &amp; Demographics
                 </h2>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-neutral-500">Record ID:</span>
-                <span className="rounded bg-teal-100/70 border border-teal-300 px-2 py-0.5 text-xs font-mono font-medium text-teal-900">
+                <span className="text-[11px] text-[#827568]">Record ID:</span>
+                <span className="rounded bg-[#E8DED1]/85 border border-[#C3A989]/70 px-2 py-0.5 text-xs font-mono font-medium text-[#40382F]">
                   {patientProfile.patientId}
                 </span>
                 <button
                   type="button"
                   onClick={handleGenerateNewPatientId}
-                  className="text-[11px] text-teal-700 hover:underline font-medium"
+                  className="text-[11px] text-[#967D63] hover:underline font-medium"
                 >
                   Generate ID
                 </button>
@@ -1545,33 +1595,33 @@ export default function WorkbenchPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-neutral-700">Patient Full Name / ID</label>
+                <label className="text-[11px] font-medium text-[#40382F]">Patient Full Name / ID</label>
                 <input
                   type="text"
                   value={patientProfile.name}
                   onChange={(e) => handleProfileChange('name', e.target.value)}
                   placeholder="e.g. S. Sharma"
-                  className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs text-neutral-800"
+                  className="w-full rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs text-[#40382F]"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-neutral-700">Age (years)</label>
+                <label className="text-[11px] font-medium text-[#40382F]">Age (years)</label>
                 <input
                   type="number"
                   value={patientProfile.age}
                   onChange={(e) => handleProfileChange('age', e.target.value)}
                   placeholder="e.g. 38"
-                  className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs num text-neutral-800"
+                  className="w-full rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs num text-[#40382F]"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-neutral-700">Biological Sex</label>
+                <label className="text-[11px] font-medium text-[#40382F]">Biological Sex</label>
                 <select
                   value={patientProfile.gender}
                   onChange={(e) => handleProfileChange('gender', e.target.value)}
-                  className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
+                  className="w-full rounded border border-[#C3A989]/50 bg-white px-2 py-1 text-xs text-[#40382F]"
                 >
                   <option value="Female">Female</option>
                   <option value="Male">Male</option>
@@ -1581,12 +1631,12 @@ export default function WorkbenchPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-neutral-700">Nearest Neighbours (k)</label>
+                <label className="text-[11px] font-medium text-[#40382F]">Nearest Neighbours (k)</label>
                 <select
                   id="k-selector"
                   value={kParam}
                   onChange={(e) => setKParam(Number(e.target.value))}
-                  className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs num font-medium text-neutral-800"
+                  className="w-full rounded border border-[#C3A989]/50 bg-white px-2 py-1 text-xs num font-medium text-[#40382F]"
                 >
                   {[1, 3, 5, 7, 10].map((val) => (
                     <option key={val} value={val}>
@@ -1598,25 +1648,25 @@ export default function WorkbenchPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-neutral-700">Chief Complaint &amp; Clinical Notes</label>
+              <label className="text-[11px] font-medium text-[#40382F]">Chief Complaint &amp; Clinical Notes</label>
               <textarea
                 rows={2}
                 value={patientProfile.chiefComplaint}
                 onChange={(e) => handleProfileChange('chiefComplaint', e.target.value)}
                 placeholder="Describe current clinical symptoms, digestive irregularities, sleep complaints, or stress factors..."
-                className="w-full rounded border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-neutral-800"
+                className="w-full rounded border border-[#C3A989]/50 bg-white px-2.5 py-1.5 text-xs text-[#40382F]"
               />
             </div>
           </div>
 
           {/* Quick Presets & Controls Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded border border-neutral-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded border border-[#E8DED1]">
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={handleRunRetrieval}
                 disabled={isRetrieving}
-                className="inline-flex items-center gap-1.5 rounded bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800 disabled:opacity-50 shadow-sm transition"
+                className="inline-flex items-center gap-1.5 rounded bg-[#40382F] px-4 py-2 text-xs font-semibold text-[#F3EADF] hover:bg-[#967D63] disabled:opacity-50 shadow-sm transition"
               >
                 {isRetrieving ? (
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -1626,9 +1676,9 @@ export default function WorkbenchPage() {
                 Run Retrieval
               </button>
 
-              <span className="text-neutral-300">|</span>
+              <span className="text-[#C3A989]">|</span>
 
-              <span className="text-[11px] font-medium text-neutral-500">Presets:</span>
+              <span className="text-[11px] font-medium text-[#827568]">Presets:</span>
               <button
                 type="button"
                 onClick={() => handleLoadPreset('vata')}
@@ -1658,32 +1708,32 @@ export default function WorkbenchPage() {
                 Vata+Pitta
               </button>
 
-              <span className="text-neutral-300">|</span>
+              <span className="text-[#C3A989]">|</span>
 
               <button
                 type="button"
                 onClick={() => handleLoadExample(0)}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65 transition"
               >
-                <FolderOpen className="h-3.5 w-3.5 text-neutral-500" />
+                <FolderOpen className="h-3.5 w-3.5 text-[#827568]" />
                 Load Example #1
               </button>
 
               <button
                 type="button"
                 onClick={handleFillRandom}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65 transition"
               >
-                <Shuffle className="h-3.5 w-3.5 text-neutral-500" />
+                <Shuffle className="h-3.5 w-3.5 text-[#827568]" />
                 Fill Random
               </button>
 
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 rounded border border-[#E8DED1] bg-white px-2.5 py-1 text-xs font-medium text-[#827568] hover:bg-[#F3EADF]/65 transition"
               >
-                <RotateCcw className="h-3.5 w-3.5 text-neutral-400" />
+                <RotateCcw className="h-3.5 w-3.5 text-[#827568]/80" />
                 Reset
               </button>
             </div>
@@ -1694,15 +1744,15 @@ export default function WorkbenchPage() {
                 placeholder="Case name (optional)"
                 value={caseNameInput}
                 onChange={(e) => setCaseNameInput(e.target.value)}
-                className="rounded border border-neutral-300 px-2.5 py-1 text-xs text-neutral-800 placeholder-neutral-400 w-36"
+                className="rounded border border-[#C3A989]/50 px-2.5 py-1 text-xs text-[#40382F] placeholder-neutral-400 w-36"
               />
               <button
                 type="button"
                 onClick={handleSaveCase}
-                className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                className="inline-flex items-center gap-1 rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65"
                 title="Save case to browser localStorage"
               >
-                <Save className="h-3.5 w-3.5 text-neutral-500" />
+                <Save className="h-3.5 w-3.5 text-[#827568]" />
                 Save Patient
               </button>
             </div>
@@ -1710,20 +1760,20 @@ export default function WorkbenchPage() {
 
           {/* Saved Cases Registry Drawer (if any exist) */}
           {savedCases.length > 0 && (
-            <div className="paper-card p-3 bg-neutral-50/50">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-200 text-xs">
-                <span className="font-semibold text-neutral-700">
+            <div className="paper-card p-3 bg-[#F3EADF]/65">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E8DED1] text-xs">
+                <span className="font-semibold text-[#40382F]">
                   Saved Patient Registry ({savedCases.length} records in local storage)
                 </span>
-                <span className="text-[11px] text-neutral-400">Stored strictly in browser localStorage</span>
+                <span className="text-[11px] text-[#827568]/80">Stored strictly in browser localStorage</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {savedCases.map((sc) => (
                   <div
                     key={sc.id}
-                    className="inline-flex items-center gap-2 rounded border border-neutral-200 bg-white px-2.5 py-1 text-xs text-neutral-800 shadow-xs"
+                    className="inline-flex items-center gap-2 rounded border border-[#E8DED1] bg-white px-2.5 py-1 text-xs text-[#40382F] shadow-xs"
                   >
-                    <span className="font-semibold text-teal-900">{sc.name}</span>
+                    <span className="font-semibold text-[#40382F]">{sc.name}</span>
                     {sc.predictedClass && (
                       <span
                         className="rounded px-1.5 py-0.2 text-[10px] font-semibold text-white"
@@ -1732,20 +1782,20 @@ export default function WorkbenchPage() {
                         {sc.predictedClass}
                       </span>
                     )}
-                    <span className="text-[10px] text-neutral-400 num">
+                    <span className="text-[10px] text-[#827568]/80 num">
                       {sc.enteredCount}/29 traits
                     </span>
                     <button
                       type="button"
                       onClick={() => handleLoadSavedCase(sc)}
-                      className="text-teal-700 hover:underline text-[11px] font-medium"
+                      className="text-[#967D63] hover:underline text-[11px] font-medium"
                     >
                       Load
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteSavedCase(sc.id)}
-                      className="text-neutral-400 hover:text-red-600"
+                      className="text-[#827568]/80 hover:text-red-600"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -1767,7 +1817,7 @@ export default function WorkbenchPage() {
                     SIMULATED
                   </span>
                 </div>
-                <span className="text-[11px] text-neutral-500">
+                <span className="text-[11px] text-[#827568]">
                   Continuous physiological vitals generated from class-conditional distributions
                 </span>
               </div>
@@ -1784,10 +1834,10 @@ export default function WorkbenchPage() {
                   return (
                     <div key={vKey} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <label htmlFor={`vital-${vKey}`} className="text-xs font-medium text-neutral-700">
+                        <label htmlFor={`vital-${vKey}`} className="text-xs font-medium text-[#40382F]">
                           {bounds.label}
                         </label>
-                        <span className="text-[10px] text-neutral-400 num">
+                        <span className="text-[10px] text-[#827568]/80 num">
                           {bounds.min}–{bounds.max}
                         </span>
                       </div>
@@ -1800,7 +1850,7 @@ export default function WorkbenchPage() {
                         className={`w-full rounded border px-2.5 py-1 text-xs num ${
                           isOutOfBounds
                             ? 'border-red-400 bg-red-50 text-red-900'
-                            : 'border-neutral-300 bg-white text-neutral-800'
+                            : 'border-[#C3A989]/50 bg-white text-[#40382F]'
                         }`}
                       />
                       {isOutOfBounds && (
@@ -1816,66 +1866,68 @@ export default function WorkbenchPage() {
           )}
 
           {/* Trait Search & Completion Progress Banner */}
-          <div className="paper-card p-4 flex flex-wrap items-center justify-between gap-4 bg-linear-to-r from-teal-50/50 via-white to-slate-50/50 border-teal-200/70">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+          <div className="paper-card p-4 flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#F3EADF]/70 via-white/80 to-[#E8DED1]/50 border-[#C3A989]/50">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-[#827568]/80" />
               <input
                 type="text"
                 value={traitFilterQuery}
                 onChange={(e) => setTraitFilterQuery(e.target.value)}
                 placeholder="Search traits by name (e.g. sleep, appetite, skin, digestion)..."
-                className="w-full rounded-md border border-neutral-300 bg-white pl-9 pr-8 py-1.5 text-xs text-neutral-800 placeholder-neutral-400 focus:border-teal-600 focus:outline-hidden shadow-2xs"
+                className="w-full rounded-md border border-[#C3A989]/50 bg-white pl-9 pr-8 py-1.5 text-xs text-[#40382F] placeholder-[#827568]/70 focus:border-[#967D63] focus:outline-hidden shadow-2xs"
               />
               {traitFilterQuery && (
                 <button
                   type="button"
                   onClick={() => setTraitFilterQuery('')}
-                  className="absolute right-2.5 top-2 text-neutral-400 hover:text-neutral-600"
+                  className="absolute right-2.5 top-2 text-[#827568]/80 hover:text-[#827568]"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="text-right">
-                <div className="text-xs font-semibold text-neutral-800">
-                  <span className="num font-bold text-teal-800">{enteredTraitsCount} / 29</span> traits entered
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+              <div className="text-left sm:text-right">
+                <div className="text-xs font-semibold text-[#40382F]">
+                  <span className="num font-bold text-[#967D63]">{enteredTraitsCount} / 29</span> traits entered
                 </div>
-                <div className="text-[10px] text-neutral-400">
+                <div className="text-[10px] text-[#827568]/80">
                   {enteredTraitsCount === 29 ? 'Complete profile ready for phenotyping' : `${29 - enteredTraitsCount} traits unassigned (treated as Unknown)`}
                 </div>
               </div>
 
-              <div className="w-28 h-2.5 rounded-full bg-neutral-200 overflow-hidden ring-1 ring-neutral-300/60">
-                <div
-                  className="h-full bg-linear-to-r from-teal-600 to-emerald-500 rounded-full transition-all duration-300"
-                  style={{ width: `${(enteredTraitsCount / 29) * 100}%` }}
-                />
-              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-24 sm:w-28 h-2.5 rounded-full bg-[#E8DED1] overflow-hidden ring-1 ring-[#C3A989]/40">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#C3A989] to-[#967D63] rounded-full transition-all duration-300"
+                    style={{ width: `${(enteredTraitsCount / 29) * 100}%` }}
+                  />
+                </div>
 
-              <span className="rounded bg-teal-50 border border-teal-200 px-2 py-0.5 text-xs font-bold text-teal-900 num">
-                {Math.round((enteredTraitsCount / 29) * 100)}%
-              </span>
+                <span className="rounded bg-[#E8DED1]/80 border border-[#C3A989]/50 px-2 py-0.5 text-xs font-bold text-[#40382F] num">
+                  {Math.round((enteredTraitsCount / 29) * 100)}%
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Trait Form Section 1: Physical Traits (0..14) */}
           <div className="paper-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+            <div className="flex items-center justify-between border-b border-[#E8DED1] pb-2">
               <div className="flex items-center gap-2">
-                <Dna className="h-4 w-4 text-teal-700" />
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
+                <Dna className="h-4 w-4 text-[#967D63]" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                   1. Physical Traits (Columns 1–15)
                 </h2>
               </div>
-              <span className="text-[11px] text-neutral-400">
+              <span className="text-[11px] text-[#827568]/80">
                 {filteredPhysicalIndices.length} traits visible
               </span>
             </div>
 
             {filteredPhysicalIndices.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic py-2">
+              <p className="text-xs text-[#827568]/80 italic py-2">
                 No physical traits match &quot;{traitFilterQuery}&quot;.
               </p>
             ) : (
@@ -1888,7 +1940,7 @@ export default function WorkbenchPage() {
                     <div key={trait.name} className="space-y-1">
                       <label
                         htmlFor={`trait-${tIdx}`}
-                        className="block text-[11px] font-medium text-neutral-700 truncate"
+                        className="block text-[11px] font-medium text-[#40382F] truncate"
                         title={trait.name}
                       >
                         {trait.name}
@@ -1897,7 +1949,7 @@ export default function WorkbenchPage() {
                         id={`trait-${tIdx}`}
                         value={selectedVal}
                         onChange={(e) => handleTraitChange(trait.name, e.target.value)}
-                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800 truncate focus:border-teal-600 focus:outline-hidden"
+                        className="w-full rounded border border-[#C3A989]/50 bg-white px-2 py-1 text-xs text-[#40382F] truncate focus:border-[#967D63] focus:outline-hidden"
                       >
                         <option value="">— Unknown / Missing —</option>
                         {trait.levels.map((lvl) => (
@@ -1915,20 +1967,20 @@ export default function WorkbenchPage() {
 
           {/* Trait Form Section 2: Physiological & Lifestyle Traits (15..28) */}
           <div className="paper-card p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+            <div className="flex items-center justify-between border-b border-[#E8DED1] pb-2">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-teal-700" />
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
+                <Activity className="h-4 w-4 text-[#967D63]" />
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                   2. Physiological &amp; Lifestyle Traits (Columns 16–29)
                 </h2>
               </div>
-              <span className="text-[11px] text-neutral-400">
+              <span className="text-[11px] text-[#827568]/80">
                 {filteredPhysiologicalIndices.length} traits visible
               </span>
             </div>
 
             {filteredPhysiologicalIndices.length === 0 ? (
-              <p className="text-xs text-neutral-400 italic py-2">
+              <p className="text-xs text-[#827568]/80 italic py-2">
                 No physiological traits match &quot;{traitFilterQuery}&quot;.
               </p>
             ) : (
@@ -1941,7 +1993,7 @@ export default function WorkbenchPage() {
                     <div key={trait.name} className="space-y-1">
                       <label
                         htmlFor={`trait-${tIdx}`}
-                        className="block text-[11px] font-medium text-neutral-700 truncate"
+                        className="block text-[11px] font-medium text-[#40382F] truncate"
                         title={trait.name}
                       >
                         {trait.name}
@@ -1950,7 +2002,7 @@ export default function WorkbenchPage() {
                         id={`trait-${tIdx}`}
                         value={selectedVal}
                         onChange={(e) => handleTraitChange(trait.name, e.target.value)}
-                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800 truncate focus:border-teal-600 focus:outline-hidden"
+                        className="w-full rounded border border-[#C3A989]/50 bg-white px-2 py-1 text-xs text-[#40382F] truncate focus:border-[#967D63] focus:outline-hidden"
                       >
                         <option value="">— Unknown / Missing —</option>
                         {trait.levels.map((lvl) => (
@@ -1967,15 +2019,15 @@ export default function WorkbenchPage() {
           </div>
 
           {/* Secondary Bottom Action Bar below traits */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-neutral-50 p-4 rounded-lg border border-neutral-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#F3EADF]/65 p-4 rounded-lg border border-[#E8DED1]">
             <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-neutral-600">
-                <span className="font-semibold text-neutral-900">{enteredTraitsCount}</span> / {currentMeta.traits.length} traits selected
+              <span className="text-xs font-medium text-[#827568]">
+                <span className="font-semibold text-[#40382F]">{enteredTraitsCount}</span> / {currentMeta.traits.length} traits selected
               </span>
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1 rounded border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 transition"
+                className="inline-flex items-center gap-1 rounded border border-[#C3A989]/50 bg-white px-2.5 py-1.5 text-xs font-medium text-[#40382F] hover:bg-[#E8DED1]/70 transition"
               >
                 <RotateCcw className="h-3 w-3" />
                 Clear All
@@ -1987,7 +2039,7 @@ export default function WorkbenchPage() {
                 <button
                   type="button"
                   onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  className="inline-flex items-center gap-1.5 rounded border border-teal-300 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-100 transition"
+                  className="inline-flex items-center gap-1.5 rounded border border-[#C3A989]/70 bg-[#E8DED1]/80 px-3 py-2 text-xs font-semibold text-[#967D63] hover:bg-[#E8DED1] transition"
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
                   Jump to Results
@@ -1997,7 +2049,7 @@ export default function WorkbenchPage() {
                 type="button"
                 onClick={handleRunRetrieval}
                 disabled={isRetrieving}
-                className="inline-flex items-center gap-2 rounded bg-teal-700 px-4 py-2 text-xs font-bold text-white hover:bg-teal-800 disabled:opacity-50 shadow-sm transition"
+                className="inline-flex items-center gap-2 rounded bg-[#40382F] px-4 py-2 text-xs font-bold text-[#F3EADF] hover:bg-[#967D63] disabled:opacity-50 shadow-sm transition"
               >
                 {isRetrieving ? (
                   <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -2013,7 +2065,7 @@ export default function WorkbenchPage() {
           {/* RESULTS PANEL: PREDICTION & RECOMMENDATIONS                      */}
           {/* ================================================================ */}
           {results && (
-            <div ref={resultsRef} id="retrieval-results" className="space-y-6 pt-4 border-t border-neutral-200 scroll-mt-20">
+            <div ref={resultsRef} id="retrieval-results" className="space-y-6 pt-4 border-t border-[#E8DED1] scroll-mt-20">
               {/* Baseline Prior Explanation Banner if 0 traits entered */}
               {enteredTraitsCount === 0 && (
                 <div className="rounded border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
@@ -2027,26 +2079,26 @@ export default function WorkbenchPage() {
                 </div>
               )}
               {/* Mandatory R11 Research Prototype Banner */}
-              <div className="rounded border border-neutral-300 bg-neutral-100/70 p-3 text-xs text-neutral-700 flex items-center justify-between">
+              <div className="rounded border border-[#C3A989]/50 bg-[#E8DED1]/80 p-3 text-xs text-[#40382F] flex items-center justify-between">
                 <span className="font-medium">Notice: {R11_DISCLAIMER}</span>
-                <span className="text-[11px] text-neutral-500">
+                <span className="text-[11px] text-[#827568]">
                   Nearest-neighbour labels reflect database records only (Rule R10).
                 </span>
               </div>
 
               {/* Patient Case Identity Banner */}
-              <div className="paper-card p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-4">
+              <div className="paper-card p-4 hero-champagne-gradient text-white flex flex-wrap items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-teal-500 px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider text-slate-950 uppercase">
+                    <span className="rounded bg-white/25 border border-white/50 px-2.5 py-0.5 text-[10px] font-mono font-bold tracking-wider text-white backdrop-blur-sm uppercase">
                       Patient Record #{patientProfile.patientId}
                     </span>
-                    <span className="text-xs text-slate-300 font-medium">
+                    <span className="text-xs text-[#F3EADF] font-medium">
                       {patientProfile.name || 'Anonymous Patient'} ({patientProfile.age || '—'} yrs · {patientProfile.gender})
                     </span>
                   </div>
                   {patientProfile.chiefComplaint && (
-                    <p className="text-xs text-slate-400 italic">
+                    <p className="text-xs text-[#F3EADF]/85 italic">
                       &quot;{patientProfile.chiefComplaint}&quot;
                     </p>
                   )}
@@ -2056,15 +2108,15 @@ export default function WorkbenchPage() {
                   <button
                     type="button"
                     onClick={handlePrintReport}
-                    className="inline-flex items-center gap-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition"
+                    className="inline-flex items-center gap-1.5 rounded bg-white/20 hover:bg-white/30 border border-white/45 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition"
                   >
-                    <Printer className="h-3.5 w-3.5 text-teal-400" />
+                    <Printer className="h-3.5 w-3.5 text-[#F3EADF]" />
                     Print / PDF Report
                   </button>
                   <button
                     type="button"
                     onClick={handleExportJSON}
-                    className="inline-flex items-center gap-1.5 rounded bg-teal-600 hover:bg-teal-500 px-3 py-1.5 text-xs font-medium text-white transition shadow-sm"
+                    className="inline-flex items-center gap-1.5 rounded bg-white text-[#40382F] hover:bg-[#F3EADF] px-3 py-1.5 text-xs font-semibold transition shadow-sm"
                   >
                     <Download className="h-3.5 w-3.5" />
                     Export Case JSON
@@ -2073,13 +2125,13 @@ export default function WorkbenchPage() {
               </div>
 
               {/* Executive Consensus Phenotype Prediction Card */}
-              <div className="paper-card p-6 border-teal-300/80 bg-linear-to-r from-teal-50/50 via-white to-slate-50/50 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-teal-100 pb-3">
+              <div className="paper-card p-6 border-[#C3A989]/60 bg-gradient-to-r from-[#F3EADF]/70 via-white/80 to-[#E8DED1]/50 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DED1] pb-3">
                   <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-800">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#967D63]">
                       Historical Dataset Phenotype Consensus (kNN vote, k={kParam})
                     </span>
-                    <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2 mt-0.5">
+                    <h3 className="text-base font-bold text-[#40382F] flex items-center gap-2 mt-0.5">
                       <span>Predicted Constitutional Phenotype:</span>
                       <span
                         className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded text-sm font-bold text-white shadow-xs"
@@ -2096,7 +2148,7 @@ export default function WorkbenchPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-teal-100 border border-teal-300 px-3 py-1 text-xs font-bold text-teal-900">
+                    <span className="rounded-full bg-[#E8DED1] border border-[#C3A989]/70 px-3 py-1 text-xs font-bold text-[#40382F]">
                       {results.consensusConfidence}% Cohort Confidence
                     </span>
                   </div>
@@ -2104,56 +2156,56 @@ export default function WorkbenchPage() {
 
                 {/* Symmetrical Multi-Metric Consensus Breakdown */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2 shadow-2xs">
+                  <div className="rounded-lg border border-[#E8DED1] bg-white p-3 space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-teal-900">Gower Consensus</span>
-                      <span className="text-[10px] text-neutral-400">Mixed Categorical</span>
+                      <span className="font-semibold text-[#40382F]">Gower Consensus</span>
+                      <span className="text-[10px] text-[#827568]/80">Mixed Categorical</span>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="font-medium text-neutral-700">Winner: {results.gowerWinner}</span>
-                      <span className="num font-semibold text-teal-800">
+                      <span className="font-medium text-[#40382F]">Winner: {results.gowerWinner}</span>
+                      <span className="num font-semibold text-[#967D63]">
                         {results.gowerVote[results.gowerWinner] || 0} / {kParam} votes
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-[#E8DED1]/70 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-teal-600 rounded-full transition-all duration-300"
+                        className="h-full bg-[#967D63] rounded-full transition-all duration-300"
                         style={{ width: `${((results.gowerVote[results.gowerWinner] || 0) / kParam) * 100}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2 shadow-2xs">
+                  <div className="rounded-lg border border-[#E8DED1] bg-white p-3 space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-neutral-900">Euclidean (mode-imp)</span>
-                      <span className="text-[10px] text-neutral-400">One-Hot + Z-score</span>
+                      <span className="font-semibold text-[#40382F]">Euclidean (mode-imp)</span>
+                      <span className="text-[10px] text-[#827568]/80">One-Hot + Z-score</span>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="font-medium text-neutral-700">Winner: {results.euclidWinner}</span>
-                      <span className="num font-semibold text-neutral-800">
+                      <span className="font-medium text-[#40382F]">Winner: {results.euclidWinner}</span>
+                      <span className="num font-semibold text-[#40382F]">
                         {results.euclidVote[results.euclidWinner] || 0} / {kParam} votes
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-[#E8DED1]/70 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-slate-700 rounded-full transition-all duration-300"
+                        className="h-full bg-[#40382F] rounded-full transition-all duration-300"
                         style={{ width: `${((results.euclidVote[results.euclidWinner] || 0) / kParam) * 100}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-neutral-200 bg-white p-3 space-y-2 shadow-2xs">
+                  <div className="rounded-lg border border-[#E8DED1] bg-white p-3 space-y-2 shadow-2xs">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-neutral-900">Cosine (mode-imp)</span>
-                      <span className="text-[10px] text-neutral-400">Angular Distance</span>
+                      <span className="font-semibold text-[#40382F]">Cosine (mode-imp)</span>
+                      <span className="text-[10px] text-[#827568]/80">Angular Distance</span>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="font-medium text-neutral-700">Winner: {results.cosineWinner}</span>
-                      <span className="num font-semibold text-neutral-800">
+                      <span className="font-medium text-[#40382F]">Winner: {results.cosineWinner}</span>
+                      <span className="num font-semibold text-[#40382F]">
                         {results.cosineVote[results.cosineWinner] || 0} / {kParam} votes
                       </span>
                     </div>
-                    <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-[#E8DED1]/70 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-amber-600 rounded-full transition-all duration-300"
                         style={{ width: `${((results.cosineVote[results.cosineWinner] || 0) / kParam) * 100}%` }}
@@ -2162,10 +2214,10 @@ export default function WorkbenchPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs text-neutral-600 bg-neutral-50 p-2.5 rounded border border-neutral-200">
+                <div className="flex items-center gap-2 text-xs text-[#827568] bg-[#F3EADF]/65 p-2.5 rounded border border-[#E8DED1]">
                   {results.metricsConsensusAgree ? (
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-[#967D63] shrink-0" />
                       <span>
                         Full three-metric consensus: Gower, Euclidean, and Cosine all retrieve{' '}
                         <strong>{results.primaryConsensusClass}</strong> as the dominant plurality class.
@@ -2185,25 +2237,25 @@ export default function WorkbenchPage() {
 
               {/* Continuous Tri-Dosha Prakriti Spectrum (Overcoming Discrete Bucketing) */}
               {results.triDoshaSpectrum && (
-                <div className="paper-card p-5 space-y-3.5 border-l-4 border-l-teal-600 bg-linear-to-r from-teal-50/20 via-white to-neutral-50/40">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                <div className="paper-card p-5 space-y-3.5 border-l-4 border-l-[#967D63] bg-gradient-to-r from-[#F3EADF]/55 via-white to-[#E8DED1]/40">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-teal-700" />
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F] flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[#967D63]" />
                         <span>Continuous Tri-Dosha Prakriti Spectrum (Overcoming Discrete Bucketing)</span>
                       </h3>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-[11px] text-[#827568]">
                         Distance-weighted kernel mixture over retrieved neighbours, quantifying constitution as continuous biological proportions.
                       </p>
                     </div>
-                    <span className="rounded bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+                    <span className="rounded bg-[#E8DED1]/80 border border-[#C3A989]/50 px-2.5 py-0.5 text-xs font-bold text-[#967D63]">
                       Prakriti Mixture Analysis
                     </span>
                   </div>
 
                   {/* Multi-Dosha Horizontal Spectrum Bar */}
                   <div className="space-y-1.5">
-                    <div className="flex h-4 w-full overflow-hidden rounded-full bg-neutral-100 shadow-inner">
+                    <div className="flex h-4 w-full overflow-hidden rounded-full bg-[#E8DED1]/70 shadow-inner">
                       <div
                         className="transition-all duration-500 bg-sky-500"
                         style={{ width: `${results.triDoshaSpectrum.vata}%` }}
@@ -2241,31 +2293,31 @@ export default function WorkbenchPage() {
               {/* Clinical Reliability, Missingness & Boundary Tie Index (Overcoming Incompleteness & Geometry Ambiguity) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Intake Completeness & Reliability */}
-                <div className="paper-card p-4 space-y-2 border-t-2 border-t-teal-600">
+                <div className="paper-card p-4 space-y-2 border-t-2 border-t-[#967D63]">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-neutral-800">Observation Coverage</span>
-                    <span className="rounded bg-teal-50 px-2 py-0.5 font-bold text-teal-800 text-[11px]">
+                    <span className="font-semibold text-[#40382F]">Observation Coverage</span>
+                    <span className="rounded bg-[#E8DED1]/80 px-2 py-0.5 font-bold text-[#967D63] text-[11px]">
                       {results.confidenceRating} Confidence
                     </span>
                   </div>
-                  <div className="text-sm font-bold text-neutral-900 num">
+                  <div className="text-sm font-bold text-[#40382F] num">
                     {results.traitCoveragePct}% ({enteredTraitsCount} / {currentMeta.traits.length} traits)
                   </div>
-                  <p className="text-[11px] text-neutral-500 leading-snug">
+                  <p className="text-[11px] text-[#827568] leading-snug">
                     {results.confidenceNote}
                   </p>
                 </div>
 
                 {/* Shannon Phenotypic Ambiguity */}
-                <div className="paper-card p-4 space-y-2 border-t-2 border-t-slate-600">
+                <div className="paper-card p-4 space-y-2 border-t-2 border-t-[#C3A989]">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-neutral-800">Neighborhood Ambiguity</span>
-                    <span className="text-[11px] text-neutral-400 font-mono">H / H_max</span>
+                    <span className="font-semibold text-[#40382F]">Neighborhood Ambiguity</span>
+                    <span className="text-[11px] text-[#827568]/80 font-mono">H / H_max</span>
                   </div>
-                  <div className="text-sm font-bold text-neutral-900 num">
+                  <div className="text-sm font-bold text-[#40382F] num">
                     {results.ambiguityPct}% Ambiguity
                   </div>
-                  <p className="text-[11px] text-neutral-500 leading-snug">
+                  <p className="text-[11px] text-[#827568] leading-snug">
                     {results.ambiguityPct < 30
                       ? 'High consensus: top-k neighbors strongly cluster into a single dominant phenotype.'
                       : 'Mixed constitutional neighborhood: multiple Dosha phenotypes present in top-k.'}
@@ -2275,15 +2327,15 @@ export default function WorkbenchPage() {
                 {/* Boundary Tie Analysis */}
                 <div className="paper-card p-4 space-y-2 border-t-2 border-t-amber-500">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-neutral-800">Boundary Tie Analysis</span>
-                    <span className="text-[11px] text-neutral-400">Rank k={kParam}</span>
+                    <span className="font-semibold text-[#40382F]">Boundary Tie Analysis</span>
+                    <span className="text-[11px] text-[#827568]/80">Rank k={kParam}</span>
                   </div>
-                  <div className="text-sm font-bold text-neutral-900 num">
+                  <div className="text-sm font-bold text-[#40382F] num">
                     {results.boundaryTieCount > 1
                       ? `${results.boundaryTieCount} Records Tied`
                       : 'Unique Boundary (0 Ties)'}
                   </div>
-                  <p className="text-[11px] text-neutral-500 leading-snug">
+                  <p className="text-[11px] text-[#827568] leading-snug">
                     {results.boundaryTieCount > 1
                       ? `Equivalence class at boundary: ${results.boundaryTieCount} records share identical distance; stable index sort applied (R13).`
                       : 'Strict distance threshold: top-k cut-off does not split an equivalence class.'}
@@ -2293,10 +2345,10 @@ export default function WorkbenchPage() {
 
               {/* Imputation Invariance / Divergence Banner */}
               {results.imputationAnalysis && (
-                <div className="paper-card p-4 border border-slate-200 bg-slate-50/70 flex items-start gap-3">
-                  <Info className="h-4 w-4 text-teal-700 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5 text-xs text-neutral-700">
-                    <span className="font-semibold text-neutral-900">
+                <div className="paper-card p-4 border border-[#C3A989]/40 bg-[#F3EADF]/65 flex items-start gap-3">
+                  <Info className="h-4 w-4 text-[#967D63] shrink-0 mt-0.5" />
+                  <div className="space-y-0.5 text-xs text-[#40382F]">
+                    <span className="font-semibold text-[#40382F]">
                       Imputation Invariance Analysis (Mitigating Missingness Bias):
                     </span>
                     <p className="leading-relaxed">
@@ -2308,18 +2360,18 @@ export default function WorkbenchPage() {
 
               {/* Phenotypic Concordance & Trait Deviations Breakdown */}
               <div className="paper-card p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-teal-700" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F] flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-[#967D63]" />
                       <span>Phenotypic Concordance &amp; Archetype Deviations</span>
                     </h3>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-[#827568]">
                       Compares patient traits against the statistical archetype mode of{' '}
                       {results.primaryConsensusClass} in the 1,200 cohort.
                     </p>
                   </div>
-                  <span className="rounded bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+                  <span className="rounded bg-[#E8DED1]/80 border border-[#C3A989]/50 px-2.5 py-0.5 text-xs font-bold text-[#967D63]">
                     {results.concordancePct}% Archetype Alignment
                   </span>
                 </div>
@@ -2341,12 +2393,12 @@ export default function WorkbenchPage() {
                           className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-900 border border-emerald-200 shadow-2xs"
                           title={`${ct.trait}: ${ct.level} (${ct.percent}% of cohort)`}
                         >
-                          <span className="text-neutral-500">{ct.trait}:</span>
+                          <span className="text-[#827568]">{ct.trait}:</span>
                           <strong>{ct.level}</strong>
                         </span>
                       ))}
                       {results.concordantTraits.length === 0 && (
-                        <span className="text-xs text-neutral-400 italic">No traits matching archetype mode.</span>
+                        <span className="text-xs text-[#827568]/80 italic">No traits matching archetype mode.</span>
                       )}
                     </div>
                   </div>
@@ -2367,13 +2419,13 @@ export default function WorkbenchPage() {
                           className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[11px] text-amber-900 border border-amber-200 shadow-2xs"
                           title={`Patient: ${at.patientLevel} vs Typical Mode: ${at.archetypeLevel} (${at.percent}%)`}
                         >
-                          <span className="text-neutral-500">{at.trait}:</span>
-                          <strong className="text-neutral-800">{at.patientLevel}</strong>
+                          <span className="text-[#827568]">{at.trait}:</span>
+                          <strong className="text-[#40382F]">{at.patientLevel}</strong>
                           <span className="text-[10px] text-amber-700">(mode: {at.archetypeLevel})</span>
                         </span>
                       ))}
                       {results.atypicalTraits.length === 0 && (
-                        <span className="text-xs text-neutral-400 italic">No atypical deviations observed.</span>
+                        <span className="text-xs text-[#827568]/80 italic">No atypical deviations observed.</span>
                       )}
                     </div>
                   </div>
@@ -2382,45 +2434,45 @@ export default function WorkbenchPage() {
 
               {/* Classical Literature-Guided Lifestyle & Dietary Recommendations */}
               {results.literatureRecommendations && (
-                <div className="paper-card p-6 space-y-5 border-teal-200/90 bg-linear-to-b from-white to-teal-50/15">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-3">
+                <div className="paper-card p-6 space-y-5 border-[#C3A989]/60 bg-gradient-to-b from-white/80 to-[#F3EADF]/50">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-teal-700" />
-                        <h3 className="text-xs font-semibold uppercase tracking-wider text-teal-950">
+                        <BookOpen className="h-4 w-4 text-[#967D63]" />
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                           Constitutional Harmonization &amp; Recommendations (Traditional Literature Reference)
                         </h3>
                       </div>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                      <p className="text-[11px] text-[#827568] mt-0.5">
                         Synthesized from classical Charaka Samhita and Ashtanga Hridaya principles for{' '}
                         <strong>{results.primaryConsensusClass}</strong> constitution.
                       </p>
                     </div>
-                    <span className="rounded bg-teal-100/70 border border-teal-300 px-2 py-0.5 text-[10px] font-semibold text-teal-900">
+                    <span className="rounded bg-[#E8DED1]/85 border border-[#C3A989]/70 px-2 py-0.5 text-[10px] font-semibold text-[#40382F]">
                       Non-Prescriptive Educational Reference
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Ahara (Dietary Guidance) */}
-                    <div className="rounded border border-neutral-200 bg-white p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
-                        <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                    <div className="rounded border border-[#E8DED1] bg-white p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-[#E8DED1]/70 pb-2">
+                        <span className="text-xs font-bold text-[#40382F] flex items-center gap-1.5">
                           <Heart className="h-3.5 w-3.5 text-rose-600" />
                           Ahara (Dietary Harmonization)
                         </span>
-                        <span className="text-[10px] text-neutral-500">Thermal &amp; Taste Balance</span>
+                        <span className="text-[10px] text-[#827568]">Thermal &amp; Taste Balance</span>
                       </div>
 
-                      <div className="space-y-1.5 text-xs text-neutral-700">
+                      <div className="space-y-1.5 text-xs text-[#40382F]">
                         <div>
-                          <strong className="text-neutral-900">Favored Tastes:</strong>{' '}
-                          <span className="text-teal-800 font-medium">
+                          <strong className="text-[#40382F]">Favored Tastes:</strong>{' '}
+                          <span className="text-[#967D63] font-medium">
                             {results.literatureRecommendations.ahara.favoredTastes}
                           </span>
                         </div>
                         <div>
-                          <strong className="text-neutral-900">Minimize Tastes:</strong>{' '}
+                          <strong className="text-[#40382F]">Minimize Tastes:</strong>{' '}
                           <span className="text-rose-700 font-medium">
                             {results.literatureRecommendations.ahara.avoidTastes}
                           </span>
@@ -2428,17 +2480,17 @@ export default function WorkbenchPage() {
                       </div>
 
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-semibold text-neutral-800">Dietary Principles:</span>
-                        <ul className="list-disc pl-4 space-y-1 text-xs text-neutral-600">
+                        <span className="text-[11px] font-semibold text-[#40382F]">Dietary Principles:</span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-[#827568]">
                           {results.literatureRecommendations.ahara.dietaryPrinciples.map((dp, i) => (
                             <li key={i}>{dp}</li>
                           ))}
                         </ul>
                       </div>
 
-                      <div className="space-y-1 pt-1 border-t border-neutral-100">
+                      <div className="space-y-1 pt-1 border-t border-[#E8DED1]/70">
                         <span className="text-[11px] font-semibold text-emerald-800">Key Foods to Favor:</span>
-                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-neutral-600">
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-[#827568]">
                           {results.literatureRecommendations.ahara.foodsToFavor.slice(0, 4).map((f, i) => (
                             <li key={i}>{f}</li>
                           ))}
@@ -2447,42 +2499,42 @@ export default function WorkbenchPage() {
                     </div>
 
                     {/* Vihara (Lifestyle & Dinacharya) */}
-                    <div className="rounded border border-neutral-200 bg-white p-4 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
-                        <span className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                    <div className="rounded border border-[#E8DED1] bg-white p-4 space-y-3 shadow-2xs">
+                      <div className="flex items-center justify-between border-b border-[#E8DED1]/70 pb-2">
+                        <span className="text-xs font-bold text-[#40382F] flex items-center gap-1.5">
                           <Sparkles className="h-3.5 w-3.5 text-amber-600" />
                           Vihara (Lifestyle &amp; Dinacharya Routine)
                         </span>
-                        <span className="text-[10px] text-neutral-500">Circadian &amp; Physical Balance</span>
+                        <span className="text-[10px] text-[#827568]">Circadian &amp; Physical Balance</span>
                       </div>
 
-                      <div className="text-xs text-neutral-700 space-y-1">
+                      <div className="text-xs text-[#40382F] space-y-1">
                         <div>
-                          <strong className="text-neutral-900">Circadian Timing:</strong>{' '}
-                          <span className="text-neutral-600">
+                          <strong className="text-[#40382F]">Circadian Timing:</strong>{' '}
+                          <span className="text-[#827568]">
                             {results.literatureRecommendations.vihara.circadianRoutine}
                           </span>
                         </div>
                         <div>
-                          <strong className="text-neutral-900">Physical Activity:</strong>{' '}
-                          <span className="text-neutral-600">
+                          <strong className="text-[#40382F]">Physical Activity:</strong>{' '}
+                          <span className="text-[#827568]">
                             {results.literatureRecommendations.vihara.exerciseGuidelines}
                           </span>
                         </div>
                       </div>
 
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] font-semibold text-neutral-800">Daily Regimen Rituals:</span>
-                        <ul className="list-disc pl-4 space-y-1 text-xs text-neutral-600">
+                        <span className="text-[11px] font-semibold text-[#40382F]">Daily Regimen Rituals:</span>
+                        <ul className="list-disc pl-4 space-y-1 text-xs text-[#827568]">
                           {results.literatureRecommendations.vihara.dailyRegimen.map((dr, i) => (
                             <li key={i}>{dr}</li>
                           ))}
                         </ul>
                       </div>
 
-                      <div className="space-y-1 pt-1 border-t border-neutral-100">
+                      <div className="space-y-1 pt-1 border-t border-[#E8DED1]/70">
                         <span className="text-[11px] font-semibold text-sky-800">Ritucharya (Seasonal Advice):</span>
-                        <p className="text-[11px] text-neutral-600 leading-relaxed">
+                        <p className="text-[11px] text-[#827568] leading-relaxed">
                           {results.literatureRecommendations.ritucharya.seasonalAdvice}
                         </p>
                       </div>
@@ -2491,22 +2543,22 @@ export default function WorkbenchPage() {
 
                   {/* Dynamic Trait-Specific Guidance */}
                   {results.traitSpecificGuidance.length > 0 && (
-                    <div className="pt-2 border-t border-neutral-200 space-y-2">
-                      <span className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
-                        <Stethoscope className="h-3.5 w-3.5 text-teal-700" />
+                    <div className="pt-2 border-t border-[#E8DED1] space-y-2">
+                      <span className="text-xs font-semibold text-[#40382F] flex items-center gap-1.5">
+                        <Stethoscope className="h-3.5 w-3.5 text-[#967D63]" />
                         Personalized Clinical Adjustments (Based on Entered Functional Traits)
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {results.traitSpecificGuidance.map((tg, idx) => (
                           <div
                             key={idx}
-                            className="rounded border border-teal-100 bg-teal-50/40 p-2.5 text-xs space-y-1"
+                            className="rounded border border-[#E8DED1] bg-[#F3EADF]/70 p-2.5 text-xs space-y-1"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-semibold text-teal-950">{tg.title}</span>
-                              <span className="text-[10px] text-teal-700">{tg.category}</span>
+                              <span className="font-semibold text-[#40382F]">{tg.title}</span>
+                              <span className="text-[10px] text-[#967D63]">{tg.category}</span>
                             </div>
-                            <p className="text-[11px] text-neutral-600 leading-relaxed">
+                            <p className="text-[11px] text-[#827568] leading-relaxed">
                               {tg.recommendation}
                             </p>
                           </div>
@@ -2519,16 +2571,16 @@ export default function WorkbenchPage() {
 
               {/* Top Matching Historical Reference Cases */}
               <div className="paper-card p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                       Nearest Reference Patient Cases from Historical Cohort
                     </h3>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-[#827568]">
                       The closest matching historical cases from the 1,200 database rows under Gower similarity.
                     </p>
                   </div>
-                  <span className="text-[11px] text-neutral-500">
+                  <span className="text-[11px] text-[#827568]">
                     Outputs labelled strictly as &quot;Labels of the nearest dataset records&quot; (Rule R10)
                   </span>
                 </div>
@@ -2539,19 +2591,19 @@ export default function WorkbenchPage() {
                     return (
                       <div
                         key={match.recordIndex}
-                        className="rounded border border-neutral-200 bg-white p-3 space-y-2 transition hover:border-neutral-300"
+                        className="rounded border border-[#E8DED1] bg-white p-3 space-y-2 transition hover:border-[#C3A989]/50"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-3">
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-neutral-100 num text-xs font-bold text-neutral-700">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#E8DED1]/70 num text-xs font-bold text-[#40382F]">
                               #{match.rank}
                             </span>
                             <div>
-                              <span className="num font-semibold text-neutral-900">
+                              <span className="num font-semibold text-[#40382F]">
                                 Record #{match.recordIndex}
                               </span>
-                              <span className="text-neutral-400 text-xs ml-2">
-                                (Gower metric: <strong className="num text-neutral-700">{match.distance.toFixed(4)}</strong>)
+                              <span className="text-[#827568]/80 text-xs ml-2">
+                                (Gower metric: <strong className="num text-[#40382F]">{match.distance.toFixed(4)}</strong>)
                               </span>
                             </div>
                           </div>
@@ -2563,10 +2615,10 @@ export default function WorkbenchPage() {
                             >
                               {match.label}
                             </span>
-                            <span className="rounded bg-teal-50 border border-teal-200 px-2 py-0.5 text-xs font-bold text-teal-800">
+                            <span className="rounded bg-[#E8DED1]/80 border border-[#C3A989]/50 px-2 py-0.5 text-xs font-bold text-[#967D63]">
                               {match.similarityPct}% Similarity
                             </span>
-                            <span className="text-xs text-neutral-500 num">
+                            <span className="text-xs text-[#827568] num">
                               {match.matchingTraitsCount} / 29 traits
                             </span>
                             <button
@@ -2574,7 +2626,7 @@ export default function WorkbenchPage() {
                               onClick={() =>
                                 setExpandedHistoricalIdx(isExpanded ? null : match.recordIndex)
                               }
-                              className="text-xs text-teal-700 hover:underline font-medium inline-flex items-center gap-0.5"
+                              className="text-xs text-[#967D63] hover:underline font-medium inline-flex items-center gap-0.5"
                             >
                               {isExpanded ? 'Hide' : 'Inspect'}
                               {isExpanded ? (
@@ -2588,29 +2640,29 @@ export default function WorkbenchPage() {
 
                         {/* Expandable Trait Inspector */}
                         {isExpanded && (
-                          <div className="pt-2 border-t border-neutral-100 max-h-56 overflow-y-auto">
+                          <div className="pt-2 border-t border-[#E8DED1]/70 max-h-56 overflow-y-auto">
                             <table className="w-full text-left text-xs">
                               <thead>
-                                <tr className="text-neutral-500 border-b border-neutral-100 text-[11px]">
+                                <tr className="text-[#827568] border-b border-[#E8DED1]/70 text-[11px]">
                                   <th className="py-1">Trait</th>
                                   <th className="py-1">Patient Value</th>
                                   <th className="py-1">Reference #{match.recordIndex}</th>
                                   <th className="py-1 text-center">Status</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-neutral-50">
+                              <tbody className="divide-y divide-[#E8DED1]/40">
                                 {match.traitMatches.map((tm) => (
-                                  <tr key={tm.trait} className="hover:bg-neutral-50/50">
-                                    <td className="py-1 font-medium text-neutral-800">{tm.trait}</td>
-                                    <td className="py-1 text-neutral-600">{tm.userLevel}</td>
-                                    <td className="py-1 text-neutral-600">{tm.recLevel}</td>
+                                  <tr key={tm.trait} className="hover:bg-[#F3EADF]/65">
+                                    <td className="py-1 font-medium text-[#40382F]">{tm.trait}</td>
+                                    <td className="py-1 text-[#827568]">{tm.userLevel}</td>
+                                    <td className="py-1 text-[#827568]">{tm.recLevel}</td>
                                     <td className="py-1 text-center">
                                       {tm.isMatch ? (
                                         <span className="rounded bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-semibold">
                                           Match
                                         </span>
                                       ) : (
-                                        <span className="rounded bg-neutral-100 text-neutral-600 px-1.5 py-0.2 text-[10px]">
+                                        <span className="rounded bg-[#E8DED1]/70 text-[#827568] px-1.5 py-0.2 text-[10px]">
                                           Diff
                                         </span>
                                       )}
@@ -2629,21 +2681,21 @@ export default function WorkbenchPage() {
 
               {/* Side-by-Side Metric Nearest Neighbors Table */}
               <div className="paper-card p-5 space-y-4 overflow-x-auto">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                     Retrieved Nearest Neighbours (Ranked 1 to {kParam})
                   </h3>
-                  <span className="text-[11px] text-neutral-500">
+                  <span className="text-[11px] text-[#827568]">
                     Outputs labelled strictly as &quot;Labels of the nearest dataset records&quot; (Rule R10)
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Gower Column */}
-                  <div className="rounded border border-neutral-200 p-3 space-y-2">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-1">
-                      <span className="text-xs font-semibold text-teal-800">Gower Distance</span>
-                      <span className="text-[10px] text-neutral-400">Observed-trait mean</span>
+                  <div className="rounded border border-[#E8DED1] p-3 space-y-2">
+                    <div className="flex items-center justify-between border-b border-[#E8DED1]/70 pb-1">
+                      <span className="text-xs font-semibold text-[#967D63]">Gower Distance</span>
+                      <span className="text-[10px] text-[#827568]/80">Observed-trait mean</span>
                     </div>
                     <div className="space-y-1.5 text-xs">
                       {results.gower.indices.map((idx, rank) => {
@@ -2654,9 +2706,9 @@ export default function WorkbenchPage() {
                         return (
                           <div
                             key={idx}
-                            className="flex items-center justify-between rounded bg-neutral-50 px-2 py-1"
+                            className="flex items-center justify-between rounded bg-[#F3EADF]/65 px-2 py-1"
                           >
-                            <span className="num font-medium text-neutral-600">
+                            <span className="num font-medium text-[#827568]">
                               #{rank + 1} (rec #{idx})
                             </span>
                             <div className="flex items-center gap-2">
@@ -2666,7 +2718,7 @@ export default function WorkbenchPage() {
                               >
                                 {cLabel}
                               </span>
-                              <span className="num text-neutral-800">{dist.toFixed(4)}</span>
+                              <span className="num text-[#40382F]">{dist.toFixed(4)}</span>
                             </div>
                           </div>
                         );
@@ -2675,12 +2727,12 @@ export default function WorkbenchPage() {
                   </div>
 
                   {/* Euclidean Mode Impute Column */}
-                  <div className="rounded border border-neutral-200 p-3 space-y-2">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-1">
-                      <span className="text-xs font-semibold text-neutral-800">
+                  <div className="rounded border border-[#E8DED1] p-3 space-y-2">
+                    <div className="flex items-center justify-between border-b border-[#E8DED1]/70 pb-1">
+                      <span className="text-xs font-semibold text-[#40382F]">
                         Euclidean (mode-impute)
                       </span>
-                      <span className="text-[10px] text-neutral-400">One-hot + z-score</span>
+                      <span className="text-[10px] text-[#827568]/80">One-hot + z-score</span>
                     </div>
                     <div className="space-y-1.5 text-xs">
                       {results.euclidMode.indices.map((idx, rank) => {
@@ -2691,9 +2743,9 @@ export default function WorkbenchPage() {
                         return (
                           <div
                             key={idx}
-                            className="flex items-center justify-between rounded bg-neutral-50 px-2 py-1"
+                            className="flex items-center justify-between rounded bg-[#F3EADF]/65 px-2 py-1"
                           >
-                            <span className="num font-medium text-neutral-600">
+                            <span className="num font-medium text-[#827568]">
                               #{rank + 1} (rec #{idx})
                             </span>
                             <div className="flex items-center gap-2">
@@ -2703,7 +2755,7 @@ export default function WorkbenchPage() {
                               >
                                 {cLabel}
                               </span>
-                              <span className="num text-neutral-800">{dist.toFixed(4)}</span>
+                              <span className="num text-[#40382F]">{dist.toFixed(4)}</span>
                             </div>
                           </div>
                         );
@@ -2712,12 +2764,12 @@ export default function WorkbenchPage() {
                   </div>
 
                   {/* Cosine Mode Impute Column */}
-                  <div className="rounded border border-neutral-200 p-3 space-y-2">
-                    <div className="flex items-center justify-between border-b border-neutral-100 pb-1">
-                      <span className="text-xs font-semibold text-neutral-800">
+                  <div className="rounded border border-[#E8DED1] p-3 space-y-2">
+                    <div className="flex items-center justify-between border-b border-[#E8DED1]/70 pb-1">
+                      <span className="text-xs font-semibold text-[#40382F]">
                         Cosine (mode-impute)
                       </span>
-                      <span className="text-[10px] text-neutral-400">1 - cosine similarity</span>
+                      <span className="text-[10px] text-[#827568]/80">1 - cosine similarity</span>
                     </div>
                     <div className="space-y-1.5 text-xs">
                       {results.cosineMode.indices.map((idx, rank) => {
@@ -2728,9 +2780,9 @@ export default function WorkbenchPage() {
                         return (
                           <div
                             key={idx}
-                            className="flex items-center justify-between rounded bg-neutral-50 px-2 py-1"
+                            className="flex items-center justify-between rounded bg-[#F3EADF]/65 px-2 py-1"
                           >
-                            <span className="num font-medium text-neutral-600">
+                            <span className="num font-medium text-[#827568]">
                               #{rank + 1} (rec #{idx})
                             </span>
                             <div className="flex items-center gap-2">
@@ -2740,7 +2792,7 @@ export default function WorkbenchPage() {
                               >
                                 {cLabel}
                               </span>
-                              <span className="num text-neutral-800">{dist.toFixed(4)}</span>
+                              <span className="num text-[#40382F]">{dist.toFixed(4)}</span>
                             </div>
                           </div>
                         );
@@ -2751,22 +2803,22 @@ export default function WorkbenchPage() {
 
                 {/* Additional observed-only columns when missing > 0 */}
                 {results.hasMissing && results.euclidObs && results.cosineObs && (
-                  <div className="pt-2 border-t border-neutral-100 space-y-2">
-                    <span className="text-[11px] font-medium text-neutral-500">
+                  <div className="pt-2 border-t border-[#E8DED1]/70 space-y-2">
+                    <span className="text-[11px] font-medium text-[#827568]">
                       Observed-only variants (active due to {results.missingTraitsCount} unselected
                       traits):
                     </span>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="rounded border border-dashed border-neutral-300 p-2.5 text-xs space-y-1">
-                        <div className="flex justify-between text-[11px] font-semibold text-neutral-700">
+                      <div className="rounded border border-dashed border-[#C3A989]/50 p-2.5 text-xs space-y-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-[#40382F]">
                           <span>Euclidean (observed-only)</span>
-                          <span className="text-neutral-400">No imputation</span>
+                          <span className="text-[#827568]/80">No imputation</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {results.euclidObs.indices.map((idx, r) => (
                             <span
                               key={idx}
-                              className="rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] num"
+                              className="rounded bg-[#E8DED1]/70 px-1.5 py-0.5 text-[11px] num"
                             >
                               #{r + 1}: rec {idx} ({results.euclidObs.distances[r].toFixed(3)})
                             </span>
@@ -2774,16 +2826,16 @@ export default function WorkbenchPage() {
                         </div>
                       </div>
 
-                      <div className="rounded border border-dashed border-neutral-300 p-2.5 text-xs space-y-1">
-                        <div className="flex justify-between text-[11px] font-semibold text-neutral-700">
+                      <div className="rounded border border-dashed border-[#C3A989]/50 p-2.5 text-xs space-y-1">
+                        <div className="flex justify-between text-[11px] font-semibold text-[#40382F]">
                           <span>Cosine (observed-only)</span>
-                          <span className="text-neutral-400">Identical rank to Gower</span>
+                          <span className="text-[#827568]/80">Identical rank to Gower</span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {results.cosineObs.indices.map((idx, r) => (
                             <span
                               key={idx}
-                              className="rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] num"
+                              className="rounded bg-[#E8DED1]/70 px-1.5 py-0.5 text-[11px] num"
                             >
                               #{r + 1}: rec {idx} ({results.cosineObs.distances[r].toFixed(3)})
                             </span>
@@ -2797,11 +2849,11 @@ export default function WorkbenchPage() {
 
               {/* Class Vote Chart: Labels of nearest dataset records */}
               <div className="paper-card p-5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                     Labels of the Nearest Dataset Records (kNN vote, k={kParam})
                   </h3>
-                  <span className="text-[11px] text-neutral-500">
+                  <span className="text-[11px] text-[#827568]">
                     Direct count among top-{kParam} retrieved records (Rule R10)
                   </span>
                 </div>
@@ -2812,7 +2864,7 @@ export default function WorkbenchPage() {
                       data={results.voteChartData}
                       margin={{ top: 10, right: 10, left: -20, bottom: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E8DED1" />
                       <XAxis
                         dataKey="name"
                         tick={{ fontSize: 11, fill: '#555' }}
@@ -2827,9 +2879,9 @@ export default function WorkbenchPage() {
                       />
                       <RechartsTooltip />
                       <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
-                      <Bar dataKey="Gower" fill="#0F766E" />
-                      <Bar dataKey="Euclidean (mode-imp)" fill="#262626" />
-                      <Bar dataKey="Cosine (mode-imp)" fill="#737373" />
+                      <Bar dataKey="Gower" fill="#967D63" />
+                      <Bar dataKey="Euclidean (mode-imp)" fill="#40382F" />
+                      <Bar dataKey="Cosine (mode-imp)" fill="#C3A989" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2845,12 +2897,12 @@ export default function WorkbenchPage() {
       {activeTab === 'diagnostics' && (
         <div className="space-y-6">
           {!results && (
-            <div className="paper-card p-8 text-center space-y-3 bg-neutral-50/50">
-              <Scale className="mx-auto h-8 w-8 text-neutral-400" />
-              <h3 className="text-sm font-semibold text-neutral-800">
+            <div className="paper-card p-8 text-center space-y-3 bg-[#F3EADF]/65">
+              <Scale className="mx-auto h-8 w-8 text-[#827568]/80" />
+              <h3 className="text-sm font-semibold text-[#40382F]">
                 No Active Query Computed Yet
               </h3>
-              <p className="text-xs text-neutral-500 max-w-md mx-auto">
+              <p className="text-xs text-[#827568] max-w-md mx-auto">
                 Select traits or load a preset in the Patient Intake tab, then click &quot;Run Retrieval&quot;
                 to inspect multi-metric distance projections and cluster assignments here.
               </p>
@@ -2860,7 +2912,7 @@ export default function WorkbenchPage() {
                   handleLoadPreset('dual');
                   setActiveTab('single');
                 }}
-                className="rounded bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800"
+                className="rounded bg-[#40382F] px-3.5 py-1.5 text-xs font-semibold text-[#F3EADF] hover:bg-[#967D63]"
               >
                 Load Preset in Intake Studio
               </button>
@@ -2871,25 +2923,25 @@ export default function WorkbenchPage() {
             <div className="space-y-6">
               {/* Trait Match Matrix */}
               <div className="paper-card p-5 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                   <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                       Trait Match Matrix (Query vs Gower Top-{kParam} Neighbours)
                     </h3>
-                    <p className="text-[11px] text-neutral-500">
+                    <p className="text-[11px] text-[#827568]">
                       Inspect feature-level agreement with each retrieved record
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-neutral-500">Sort rows by:</span>
+                    <span className="text-[#827568]">Sort rows by:</span>
                     <button
                       type="button"
                       onClick={() => setMatrixSortBy('order')}
                       className={`px-2 py-0.5 rounded border text-[11px] ${
                         matrixSortBy === 'order'
-                          ? 'bg-neutral-800 text-white border-neutral-800'
-                          : 'bg-white text-neutral-600 border-neutral-200'
+                          ? 'bg-[#40382F] text-white border-[#40382F]'
+                          : 'bg-white text-[#827568] border-[#E8DED1]'
                       }`}
                     >
                       Trait Order
@@ -2899,8 +2951,8 @@ export default function WorkbenchPage() {
                       onClick={() => setMatrixSortBy('mismatches')}
                       className={`px-2 py-0.5 rounded border text-[11px] ${
                         matrixSortBy === 'mismatches'
-                          ? 'bg-neutral-800 text-white border-neutral-800'
-                          : 'bg-white text-neutral-600 border-neutral-200'
+                          ? 'bg-[#40382F] text-white border-[#40382F]'
+                          : 'bg-white text-[#827568] border-[#E8DED1]'
                       }`}
                     >
                       Most Mismatches
@@ -2908,35 +2960,35 @@ export default function WorkbenchPage() {
                   </div>
                 </div>
 
-                <div className="max-h-96 overflow-y-auto border border-neutral-200 rounded">
+                <div className="max-h-96 overflow-y-auto border border-[#E8DED1] rounded">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-neutral-50 sticky top-0 border-b border-neutral-200 z-10">
+                    <thead className="bg-[#F3EADF]/65 sticky top-0 border-b border-[#E8DED1] z-10">
                       <tr>
-                        <th className="p-2 font-medium text-neutral-700 w-1/4">Trait</th>
-                        <th className="p-2 font-medium text-neutral-700 w-1/4">Query Input</th>
+                        <th className="p-2 font-medium text-[#40382F] w-1/4">Trait</th>
+                        <th className="p-2 font-medium text-[#40382F] w-1/4">Query Input</th>
                         {results.gower.indices.map((idx, r) => (
-                          <th key={idx} className="p-2 font-medium text-neutral-600 num text-center">
+                          <th key={idx} className="p-2 font-medium text-[#827568] num text-center">
                             #{r + 1} (rec {idx})
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-[#E8DED1]/70">
                       {traitMatrixRows.map((row) => (
-                        <tr key={row.traitName} className="hover:bg-neutral-50/50">
-                          <td className="p-2 font-medium text-neutral-800">{row.traitName}</td>
-                          <td className="p-2 text-neutral-600">
+                        <tr key={row.traitName} className="hover:bg-[#F3EADF]/65">
+                          <td className="p-2 font-medium text-[#40382F]">{row.traitName}</td>
+                          <td className="p-2 text-[#827568]">
                             {row.isQueryKnown ? (
-                              <span className="font-medium text-neutral-900">{row.queryLevel}</span>
+                              <span className="font-medium text-[#40382F]">{row.queryLevel}</span>
                             ) : (
-                              <span className="text-neutral-400 italic">Unknown</span>
+                              <span className="text-[#827568]/80 italic">Unknown</span>
                             )}
                           </td>
                           {row.neighborCols.map((col, cIdx) => (
                             <td key={cIdx} className="p-2 text-center">
                               {col.status === 'match' && (
                                 <span
-                                  className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-teal-50 text-teal-800 font-medium border border-teal-200"
+                                  className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-[#E8DED1]/80 text-[#967D63] font-medium border border-[#C3A989]/50"
                                   title={col.text}
                                 >
                                   Match
@@ -2951,7 +3003,7 @@ export default function WorkbenchPage() {
                                 </span>
                               )}
                               {col.status === 'unknown' && (
-                                <span className="text-neutral-300" title={col.text}>
+                                <span className="text-[#C3A989]" title={col.text}>
                                   —
                                 </span>
                               )}
@@ -2965,26 +3017,25 @@ export default function WorkbenchPage() {
               </div>
 
               {/* Cluster Assignment Card */}
-              {results.assignedClusterData && (
+              {resolvedClusterData && (
                 <div className="paper-card p-5 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#40382F]">
                         Unsupervised Cluster Assignment
                       </h3>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-[11px] text-[#827568]">
                         Query assigned to cluster with smallest mean distance to members
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
                       <select
                         value={clusteringConfig.metric}
-                        onChange={(e) => {
-                          setClusteringConfig((prev) => ({ ...prev, metric: e.target.value }));
-                          handleRunRetrieval();
-                        }}
-                        className="rounded border border-neutral-300 px-2 py-0.5 bg-white text-xs"
+                        onChange={(e) =>
+                          setClusteringConfig((prev) => ({ ...prev, metric: e.target.value }))
+                        }
+                        className="rounded-lg border border-[#C3A989]/50 px-2.5 py-1 bg-white/80 text-xs text-[#40382F]"
                       >
                         <option value="gower">Gower</option>
                         <option value="euclidean">Euclidean</option>
@@ -2993,11 +3044,10 @@ export default function WorkbenchPage() {
 
                       <select
                         value={clusteringConfig.linkage}
-                        onChange={(e) => {
-                          setClusteringConfig((prev) => ({ ...prev, linkage: e.target.value }));
-                          handleRunRetrieval();
-                        }}
-                        className="rounded border border-neutral-300 px-2 py-0.5 bg-white text-xs"
+                        onChange={(e) =>
+                          setClusteringConfig((prev) => ({ ...prev, linkage: e.target.value }))
+                        }
+                        className="rounded-lg border border-[#C3A989]/50 px-2.5 py-1 bg-white/80 text-xs text-[#40382F]"
                       >
                         <option value="average">Average Linkage</option>
                         <option value="complete">Complete Linkage</option>
@@ -3005,14 +3055,13 @@ export default function WorkbenchPage() {
 
                       <select
                         value={clusteringConfig.k}
-                        onChange={(e) => {
+                        onChange={(e) =>
                           setClusteringConfig((prev) => ({
                             ...prev,
                             k: Number(e.target.value),
-                          }));
-                          handleRunRetrieval();
-                        }}
-                        className="rounded border border-neutral-300 px-2 py-0.5 bg-white text-xs num"
+                          }))
+                        }
+                        className="rounded-lg border border-[#C3A989]/50 px-2.5 py-1 bg-white/80 text-xs num text-[#40382F]"
                       >
                         {[3, 4, 5, 6, 7, 8].map((kv) => (
                           <option key={kv} value={kv}>
@@ -3024,38 +3073,38 @@ export default function WorkbenchPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded border border-teal-200 bg-teal-50/30 p-4 space-y-2">
-                      <span className="text-xs font-semibold text-teal-900">
-                        Assigned Cluster: Cluster {results.assignedClusterData.assignedCluster + 1}
+                    <div className="rounded-xl border border-[#C3A989]/50 bg-[#F3EADF]/70 p-4 space-y-2">
+                      <span className="text-xs font-bold text-[#40382F]">
+                        Assigned Cluster: Cluster {resolvedClusterData.assignedCluster + 1}
                       </span>
-                      <p className="text-xs text-neutral-600 leading-relaxed">
-                        Nearest cluster among {results.assignedClusterData.k} partitions (cluster
+                      <p className="text-xs text-[#827568] leading-relaxed">
+                        Nearest cluster among {resolvedClusterData.k} partitions (cluster
                         size:{' '}
                         {
-                          results.assignedClusterData.clusterSizes[
-                            results.assignedClusterData.assignedCluster
+                          resolvedClusterData.clusterSizes[
+                            resolvedClusterData.assignedCluster
                           ]
                         }{' '}
                         records). ARI against dataset labels:{' '}
-                        <span className="num font-medium">
-                          {results.assignedClusterData.ari.toFixed(4)}
+                        <span className="num font-semibold text-[#40382F]">
+                          {resolvedClusterData.ari.toFixed(4)}
                         </span>
                         .
                       </p>
                     </div>
 
-                    <div className="rounded border border-neutral-200 p-3 space-y-2 text-xs">
-                      <span className="font-medium text-neutral-700">
+                    <div className="rounded-xl border border-white/80 bg-white/60 p-3 space-y-2 text-xs">
+                      <span className="font-semibold text-[#40382F]">
                         Mean distance to cluster members:
                       </span>
                       <div className="space-y-1">
-                        {results.assignedClusterData.meanDistances.map((d, cIdx) => (
+                        {resolvedClusterData.meanDistances.map((d, cIdx) => (
                           <div
                             key={cIdx}
-                            className={`flex items-center justify-between px-2 py-0.5 rounded ${
-                              cIdx === results.assignedClusterData.assignedCluster
-                                ? 'bg-teal-100/60 font-semibold text-teal-900'
-                                : 'text-neutral-600'
+                            className={`flex items-center justify-between px-2.5 py-1 rounded-lg ${
+                              cIdx === resolvedClusterData.assignedCluster
+                                ? 'bg-[#E8DED1] font-bold text-[#40382F]'
+                                : 'text-[#827568]'
                             }`}
                           >
                             <span>Cluster {cIdx + 1}</span>
@@ -3071,16 +3120,16 @@ export default function WorkbenchPage() {
               {/* 2D MDS Projection Map */}
               {dataAssets.embeddings && (
                 <div className="paper-card p-5 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8DED1] pb-2">
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                         2D Multidimensional Scaling (MDS) Map
                       </h3>
-                      <p className="text-[11px] text-neutral-500">
+                      <p className="text-[11px] text-[#827568]">
                         PCoA projection of 1,200 database records with query placement at neighbour centroid
                       </p>
                     </div>
-                    <span className="text-[10px] text-neutral-400">
+                    <span className="text-[10px] text-[#827568]/80">
                       Query placement: centroid of top-{kParam} neighbours
                     </span>
                   </div>
@@ -3088,7 +3137,7 @@ export default function WorkbenchPage() {
                   <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E8DED1" />
                         <XAxis type="number" dataKey="x" domain={[0, 1]} hide />
                         <YAxis type="number" dataKey="y" domain={[0, 1]} hide />
                         <ZAxis range={[25, 25]} />
@@ -3098,9 +3147,9 @@ export default function WorkbenchPage() {
                             if (active && payload && payload.length) {
                               const pt = payload[0].payload;
                               return (
-                                <div className="rounded bg-white p-2 border border-neutral-200 text-xs shadow-sm">
+                                <div className="rounded bg-white p-2 border border-[#E8DED1] text-xs shadow-sm">
                                   <p className="font-semibold">{pt.name}</p>
-                                  {pt.cls && <p className="text-[11px] text-neutral-600">Class: {pt.cls}</p>}
+                                  {pt.cls && <p className="text-[11px] text-[#827568]">Class: {pt.cls}</p>}
                                 </div>
                               );
                             }
@@ -3137,18 +3186,18 @@ export default function WorkbenchPage() {
                           })}
                         </Scatter>
 
-                        {results.queryCoord && (
+                        {resolvedQueryCoord && (
                           <Scatter
                             name="Current Query (Centroid)"
                             data={[
                               {
-                                x: results.queryCoord[0],
-                                y: results.queryCoord[1],
+                                x: resolvedQueryCoord[0],
+                                y: resolvedQueryCoord[1],
                                 name: 'Current Query (Approximate Centroid)',
                                 cls: 'Query',
                               },
                             ]}
-                            fill="#E11D48"
+                            fill="#967D63"
                             shape="star"
                           />
                         )}
@@ -3168,12 +3217,12 @@ export default function WorkbenchPage() {
       {activeTab === 'batch' && (
         <div className="space-y-6">
           <div className="paper-card p-5 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8DED1] pb-3">
               <div>
-                <h2 className="text-sm font-semibold text-neutral-900">
+                <h2 className="text-sm font-semibold text-[#40382F]">
                   {'Batch Case Retrieval (Max 1,000 Rows)'}
                 </h2>
-                <p className="text-xs text-neutral-500">
+                <p className="text-xs text-[#827568]">
                   Upload a CSV file containing multiple patient cases to evaluate distance rankings
                   in batch.
                 </p>
@@ -3182,21 +3231,21 @@ export default function WorkbenchPage() {
               <button
                 type="button"
                 onClick={handleDownloadTemplate}
-                className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm transition"
+                className="inline-flex items-center gap-1.5 rounded border border-[#C3A989]/50 bg-white px-3 py-1.5 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65 shadow-sm transition"
               >
-                <Download className="h-3.5 w-3.5 text-neutral-500" />
+                <Download className="h-3.5 w-3.5 text-[#827568]" />
                 Download CSV Template
               </button>
             </div>
 
             {/* Upload Area */}
-            <div className="rounded border-2 border-dashed border-neutral-300 p-6 text-center space-y-3 bg-neutral-50/50">
-              <Upload className="mx-auto h-8 w-8 text-neutral-400" />
+            <div className="rounded border-2 border-dashed border-[#C3A989]/50 p-6 text-center space-y-3 bg-[#F3EADF]/65">
+              <Upload className="mx-auto h-8 w-8 text-[#827568]/80" />
               <div>
-                <p className="text-xs font-medium text-neutral-700">
+                <p className="text-xs font-medium text-[#40382F]">
                   Select a CSV file to validate and run
                 </p>
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-[11px] text-[#827568]/80">
                   Client-side evaluation: no files or data uploaded to external servers.
                 </p>
               </div>
@@ -3211,7 +3260,7 @@ export default function WorkbenchPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded bg-white border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-sm"
+                className="rounded bg-white border border-[#C3A989]/50 px-3 py-1.5 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65 shadow-sm"
               >
                 {batchFile ? `Selected: ${batchFile.name}` : 'Browse CSV File'}
               </button>
@@ -3236,7 +3285,7 @@ export default function WorkbenchPage() {
 
             {/* Ready to Run */}
             {batchParsedRows.length > 0 && batchErrors.length === 0 && (
-              <div className="flex items-center justify-between bg-teal-50 border border-teal-200 p-3 rounded text-xs text-teal-900">
+              <div className="flex items-center justify-between bg-[#E8DED1]/80 border border-[#C3A989]/50 p-3 rounded text-xs text-[#40382F]">
                 <span>
                   Validation passed: <strong className="num">{batchParsedRows.length}</strong> case
                   rows ready for client-side batch processing.
@@ -3245,7 +3294,7 @@ export default function WorkbenchPage() {
                   type="button"
                   disabled={batchRunning}
                   onClick={handleRunBatch}
-                  className="rounded bg-teal-700 px-3 py-1.5 font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+                  className="rounded bg-[#40382F] px-3.5 py-1.5 font-semibold text-[#F3EADF] hover:bg-[#967D63] disabled:opacity-50"
                 >
                   {batchRunning ? 'Computing...' : 'Run Batch Retrieval'}
                 </button>
@@ -3254,38 +3303,38 @@ export default function WorkbenchPage() {
 
             {/* Batch Results Table */}
             {batchResults && (
-              <div className="space-y-4 pt-3 border-t border-neutral-200">
+              <div className="space-y-4 pt-3 border-t border-[#E8DED1]">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-800">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#40382F]">
                     Batch Output ({batchResults.length} Cases Evaluated)
                   </h3>
                   <button
                     type="button"
                     onClick={handleDownloadBatchResults}
-                    className="inline-flex items-center gap-1.5 rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                    className="inline-flex items-center gap-1.5 rounded border border-[#C3A989]/50 bg-white px-2.5 py-1 text-xs font-medium text-[#40382F] hover:bg-[#F3EADF]/65"
                   >
-                    <Download className="h-3.5 w-3.5 text-neutral-500" />
+                    <Download className="h-3.5 w-3.5 text-[#827568]" />
                     Download Results CSV
                   </button>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto border border-neutral-200 rounded">
+                <div className="max-h-80 overflow-y-auto border border-[#E8DED1] rounded">
                   <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-neutral-50 sticky top-0 border-b border-neutral-200">
+                    <thead className="bg-[#F3EADF]/65 sticky top-0 border-b border-[#E8DED1]">
                       <tr>
-                        <th className="p-2 font-medium text-neutral-700">Row #</th>
-                        <th className="p-2 font-medium text-neutral-700">#1 Neighbour</th>
-                        <th className="p-2 font-medium text-neutral-700">Gower Dist</th>
-                        <th className="p-2 font-medium text-neutral-700">Gower Label</th>
-                        <th className="p-2 font-medium text-neutral-700">Euclid Label</th>
-                        <th className="p-2 font-medium text-neutral-700">Cosine Label</th>
-                        <th className="p-2 font-medium text-neutral-700">All Agree?</th>
-                        <th className="p-2 font-medium text-neutral-700">Ties</th>
+                        <th className="p-2 font-medium text-[#40382F]">Row #</th>
+                        <th className="p-2 font-medium text-[#40382F]">#1 Neighbour</th>
+                        <th className="p-2 font-medium text-[#40382F]">Gower Dist</th>
+                        <th className="p-2 font-medium text-[#40382F]">Gower Label</th>
+                        <th className="p-2 font-medium text-[#40382F]">Euclid Label</th>
+                        <th className="p-2 font-medium text-[#40382F]">Cosine Label</th>
+                        <th className="p-2 font-medium text-[#40382F]">All Agree?</th>
+                        <th className="p-2 font-medium text-[#40382F]">Ties</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100">
+                    <tbody className="divide-y divide-[#E8DED1]/70">
                       {batchResults.map((r) => (
-                        <tr key={r.rowNumber} className="hover:bg-neutral-50/50">
+                        <tr key={r.rowNumber} className="hover:bg-[#F3EADF]/65">
                           <td className="p-2 num">{r.rowNumber}</td>
                           <td className="p-2 num">rec #{r.topNeighborIdx}</td>
                           <td className="p-2 num">{r.gowerDist}</td>
@@ -3294,9 +3343,9 @@ export default function WorkbenchPage() {
                           <td className="p-2">{r.cosineLabel}</td>
                           <td className="p-2">
                             {r.allAgree ? (
-                              <span className="text-teal-700 font-medium">Yes</span>
+                              <span className="text-[#967D63] font-medium">Yes</span>
                             ) : (
-                              <span className="text-neutral-400">No</span>
+                              <span className="text-[#827568]/80">No</span>
                             )}
                           </td>
                           <td className="p-2 num">{r.tieCount}</td>
@@ -3317,10 +3366,10 @@ export default function WorkbenchPage() {
           <button
             type="button"
             onClick={() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            className="inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold shadow-xl hover:bg-slate-800 border border-slate-700 transition"
+            className="inline-flex items-center gap-2 rounded-full bg-[#40382F] text-[#F3EADF] px-4 py-2.5 text-xs font-semibold shadow-xl hover:bg-[#967D63] border border-white/40 transition"
             title="Jump to consensus prediction results"
           >
-            <ChevronDown className="h-4 w-4 text-teal-400" />
+            <ChevronDown className="h-4 w-4 text-[#F3EADF]" />
             <span>View Results &amp; Consensus</span>
           </button>
         </div>

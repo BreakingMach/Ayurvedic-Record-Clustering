@@ -28,10 +28,9 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
   const [downloadStatus, setDownloadStatus] = useState('');
 
   if (!realData) {
-    return <div className="p-8 text-sm text-neutral-500">Loading export data…</div>;
+    return <div className="glass-panel rounded-2xl p-8 text-sm text-[#827568]">Loading export data…</div>;
   }
 
-  const meta = realData.provenance.dataset_metadata;
   const fullMetrics = realData.full_29_traits?.metrics || {};
   const equivalence = realData.equivalence || [];
 
@@ -107,9 +106,9 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
       'Cosine kNN F1 Std',
     ];
     const rows = [headers];
-    for (const [cId, cell] of Object.entries(syntheticData.cells)) {
+    for (const [, cell] of Object.entries(syntheticData.cells)) {
       rows.push([
-        cId,
+        cell.cell_id || '',
         cell.is_baseline,
         cell.parameters.categorical_eps,
         cell.parameters.numeric_cohens_d,
@@ -133,15 +132,15 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
     <div className="space-y-6">
       {/* Title */}
       <div>
-        <h1 className="text-xl font-semibold text-neutral-900">Reports &amp; Data Export</h1>
-        <p className="mt-2 text-sm text-neutral-600">
+        <h1 className="text-xl font-bold text-[#40382F]">Reports &amp; Data Export</h1>
+        <p className="mt-2 text-sm text-[#827568]">
           Export verified benchmark datasets, analytical summaries, and distance equivalence tables.
         </p>
       </div>
 
       {/* R11 & R13 Notice */}
-      <div className="paper-card p-4 text-xs text-neutral-600 space-y-1">
-        <p className="font-semibold text-neutral-800">
+      <div className="paper-card p-4 text-xs text-[#827568] space-y-1">
+        <p className="font-bold text-[#40382F]">
           Client-Side Data Privacy Notice (R11, R13):
         </p>
         <p>
@@ -152,8 +151,8 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
       </div>
 
       {downloadStatus && (
-        <div className="rounded border border-teal-200 bg-teal-50 p-3 text-xs text-teal-800 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-700" />
+        <div className="rounded-2xl border border-[#C3A989]/60 bg-[#E8DED1]/85 p-3.5 text-xs text-[#40382F] flex items-center gap-2 font-medium">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-[#967D63]" />
           <span>{downloadStatus}</span>
         </div>
       )}
@@ -163,11 +162,11 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
         {/* Real Benchmark CSV */}
         <div className="paper-card p-5 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-neutral-800 font-semibold text-sm">
-              <Download className="h-4 w-4 text-teal-700" />
+            <div className="flex items-center gap-2 text-[#40382F] font-bold text-sm">
+              <Download className="h-4 w-4 text-[#967D63]" />
               Real Data Benchmark
             </div>
-            <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
+            <p className="mt-2 text-xs text-[#827568] leading-relaxed">
               Full 29-trait benchmark table across Gower, Euclidean, and Cosine distances,
               including cross-validated kNN Macro-F1, retrieval P@k, and clustering ARI/NMI.
             </p>
@@ -175,7 +174,7 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
           <button
             type="button"
             onClick={handleExportRealBenchmark}
-            className="w-full inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-3 py-2 text-xs font-medium text-white hover:bg-teal-800 transition shadow-sm"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#40382F] px-3 py-2 text-xs font-semibold text-[#F3EADF] hover:bg-[#967D63] transition shadow-sm"
           >
             <Download className="h-3.5 w-3.5" />
             Download Benchmark CSV
@@ -185,11 +184,11 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
         {/* Equivalence Matrix CSV */}
         <div className="paper-card p-5 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-neutral-800 font-semibold text-sm">
-              <Download className="h-4 w-4 text-teal-700" />
+            <div className="flex items-center gap-2 text-[#40382F] font-bold text-sm">
+              <Download className="h-4 w-4 text-[#967D63]" />
               Distance Equivalence Matrix
             </div>
-            <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
+            <p className="mt-2 text-xs text-[#827568] leading-relaxed">
               Pairwise Spearman rank correlations (ρ = 1.0), min-max scaled absolute differences,
               and mean top-5 neighbor overlap on purely categorical case attributes.
             </p>
@@ -197,7 +196,7 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
           <button
             type="button"
             onClick={handleExportEquivalence}
-            className="w-full inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-3 py-2 text-xs font-medium text-white hover:bg-teal-800 transition shadow-sm"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#40382F] px-3 py-2 text-xs font-semibold text-[#F3EADF] hover:bg-[#967D63] transition shadow-sm"
           >
             <Download className="h-3.5 w-3.5" />
             Download Equivalence CSV
@@ -207,11 +206,11 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
         {/* Synthetic Sweeps CSV */}
         <div className="paper-card p-5 flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center gap-2 text-neutral-800 font-semibold text-sm">
-              <Download className="h-4 w-4 text-teal-700" />
+            <div className="flex items-center gap-2 text-[#40382F] font-bold text-sm">
+              <Download className="h-4 w-4 text-[#967D63]" />
               Synthetic OFAT Sweeps
             </div>
-            <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
+            <p className="mt-2 text-xs text-[#827568] leading-relaxed">
               Complete results across all 20 seeds per cell for Cohen’s d separation, categorical
               noise ε, outlier fraction, missing fraction, and trait count m.
             </p>
@@ -219,7 +218,7 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
           <button
             type="button"
             onClick={handleExportSyntheticSweeps}
-            className="w-full inline-flex items-center justify-center gap-2 rounded bg-teal-700 px-3 py-2 text-xs font-medium text-white hover:bg-teal-800 transition shadow-sm"
+            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#40382F] px-3 py-2 text-xs font-semibold text-[#F3EADF] hover:bg-[#967D63] transition shadow-sm"
           >
             <Download className="h-3.5 w-3.5" />
             Download Sweeps CSV
@@ -229,23 +228,23 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
 
       {/* JSON Raw Results Download */}
       <div className="paper-card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-900">Download Raw Verified JSON Artifacts</h2>
+        <h2 className="text-sm font-bold text-[#40382F]">Download Raw Verified JSON Artifacts</h2>
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
             onClick={() => downloadJson('real_data.json', realData)}
-            className="inline-flex items-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+            className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-[#F3EADF]/80 px-4 py-2 text-xs font-semibold text-[#40382F] hover:bg-white transition shadow-2xs"
           >
-            <FileText className="h-3.5 w-3.5 text-neutral-500" />
+            <FileText className="h-3.5 w-3.5 text-[#967D63]" />
             real_data.json
           </button>
           {syntheticData && (
             <button
               type="button"
               onClick={() => downloadJson('synthetic.json', syntheticData)}
-              className="inline-flex items-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-[#F3EADF]/80 px-4 py-2 text-xs font-semibold text-[#40382F] hover:bg-white transition shadow-2xs"
             >
-              <FileText className="h-3.5 w-3.5 text-neutral-500" />
+              <FileText className="h-3.5 w-3.5 text-[#967D63]" />
               synthetic.json
             </button>
           )}
@@ -253,9 +252,9 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
             <button
               type="button"
               onClick={() => downloadJson('missingness.json', missingnessData)}
-              className="inline-flex items-center gap-2 rounded border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-[#F3EADF]/80 px-4 py-2 text-xs font-semibold text-[#40382F] hover:bg-white transition shadow-2xs"
             >
-              <FileText className="h-3.5 w-3.5 text-neutral-500" />
+              <FileText className="h-3.5 w-3.5 text-[#967D63]" />
               missingness.json
             </button>
           )}
@@ -264,38 +263,38 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
 
       {/* Documentation Files Index */}
       <div className="paper-card p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-900">Project Methodology &amp; Documentation</h2>
-        <p className="text-xs text-neutral-500">
+        <h2 className="text-sm font-bold text-[#40382F]">Project Methodology &amp; Documentation</h2>
+        <p className="text-xs text-[#827568]">
           Every finding and design choice is permanently logged in the project repository.
         </p>
-        <div className="divide-y divide-neutral-100 text-xs">
-          <div className="py-2.5 flex justify-between items-center">
+        <div className="divide-y divide-[#E8DED1]/70 text-xs">
+          <div className="py-2.5 flex justify-between items-center gap-2">
             <div>
-              <span className="font-semibold text-neutral-800">docs/REAL_DATA_FINDINGS.md</span>
-              <span className="text-neutral-500 ml-2">— Detailed analysis of real dataset benchmark and Hamming equivalence</span>
+              <span className="font-semibold text-[#40382F]">docs/REAL_DATA_FINDINGS.md</span>
+              <span className="text-[#827568] ml-2">— Detailed analysis of real dataset benchmark and Hamming equivalence</span>
             </div>
-            <span className="num text-neutral-400 font-mono text-[11px]">Markdown</span>
+            <span className="num text-[#967D63] font-mono text-[11px] shrink-0">Markdown</span>
           </div>
-          <div className="py-2.5 flex justify-between items-center">
+          <div className="py-2.5 flex justify-between items-center gap-2">
             <div>
-              <span className="font-semibold text-neutral-800">docs/SYNTH_DATASHEET.md</span>
-              <span className="text-neutral-500 ml-2">— Datasheet specification for the mixed-type synthetic cohort generator</span>
+              <span className="font-semibold text-[#40382F]">docs/SYNTH_DATASHEET.md</span>
+              <span className="text-[#827568] ml-2">— Datasheet specification for the mixed-type synthetic cohort generator</span>
             </div>
-            <span className="num text-neutral-400 font-mono text-[11px]">Markdown</span>
+            <span className="num text-[#967D63] font-mono text-[11px] shrink-0">Markdown</span>
           </div>
-          <div className="py-2.5 flex justify-between items-center">
+          <div className="py-2.5 flex justify-between items-center gap-2">
             <div>
-              <span className="font-semibold text-neutral-800">docs/SYNTHETIC_FINDINGS.md</span>
-              <span className="text-neutral-500 ml-2">— Script-generated findings from the 20-seed OFAT synthetic sweeps</span>
+              <span className="font-semibold text-[#40382F]">docs/SYNTHETIC_FINDINGS.md</span>
+              <span className="text-[#827568] ml-2">— Script-generated findings from the 20-seed OFAT synthetic sweeps</span>
             </div>
-            <span className="num text-neutral-400 font-mono text-[11px]">Markdown</span>
+            <span className="num text-[#967D63] font-mono text-[11px] shrink-0">Markdown</span>
           </div>
-          <div className="py-2.5 flex justify-between items-center">
+          <div className="py-2.5 flex justify-between items-center gap-2">
             <div>
-              <span className="font-semibold text-neutral-800">docs/DECISIONS.md</span>
-              <span className="text-neutral-500 ml-2">— Comprehensive record of all conservative architectural decisions (D1–D11)</span>
+              <span className="font-semibold text-[#40382F]">docs/DECISIONS.md</span>
+              <span className="text-[#827568] ml-2">— Comprehensive record of all conservative architectural decisions (D1–D11)</span>
             </div>
-            <span className="num text-neutral-400 font-mono text-[11px]">Markdown</span>
+            <span className="num text-[#967D63] font-mono text-[11px] shrink-0">Markdown</span>
           </div>
         </div>
       </div>

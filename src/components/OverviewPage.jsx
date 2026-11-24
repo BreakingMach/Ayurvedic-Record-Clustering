@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ExternalLink,
   Database,
   Scale,
   Activity,
@@ -8,18 +7,10 @@ import {
   FlaskConical,
   ArrowRight,
   Sparkles,
-  Layers,
   ShieldAlert,
-  BarChart2,
   Network,
-  Grid3X3,
-  Search,
-  Sliders,
-  TrendingUp,
-  UserCheck,
-  Zap,
 } from 'lucide-react';
-import { STUDY_METADATA, DOSHA_PALETTE } from '../data/literatureData';
+import { DOSHA_PALETTE } from '../data/literatureData';
 import { retrieveTopKReal } from '../utils/distanceEngine';
 
 const CLUSTER_PALETTE = [
@@ -60,10 +51,6 @@ export default function OverviewPage({
     (e) => e.metric_a === 'gower' && e.metric_b === 'euclidean'
   );
 
-  const sweepD = syntheticData?.sweeps?.numeric_cohens_d?.cell_ids;
-  const d0Cell = sweepD ? syntheticData?.cells?.[sweepD[0]] : null;
-  const d2Cell = sweepD ? syntheticData?.cells?.[sweepD[sweepD.length - 1]] : null;
-
   const classEntries = Object.entries(realMeta.class_counts || {});
 
   // Live mini similarity preview on the dashboard
@@ -83,7 +70,7 @@ export default function OverviewPage({
     return [...items].sort((a, b) => (b.cramers_v ?? 0) - (a.cramers_v ?? 0)).slice(0, 8);
   }, [descriptive]);
 
-  // Submatrix for the interactive N x N distance matrix (e.g. 16 x 16 patients)
+  // Submatrix for the interactive N x N distance matrix (16 x 16 patients)
   const matrixSize = 16;
   const distanceMatrix = useMemo(() => {
     const rawMatrix = descriptive?.sample_240?.distance_matrices?.[activeMatrixMetric];
@@ -97,14 +84,15 @@ export default function OverviewPage({
     const pts = [];
     for (let i = 0; i < matrixSize; i++) {
       const globalIdx = indices[i] ?? i;
+      const realRec = realCases?.records?.[globalIdx];
       pts.push({
         idx: i,
-        caseId: `P-${String(globalIdx + 1).padStart(4, '0')}`,
-        dosha: labels[i] || 'Unknown',
+        caseId: realRec?.case_id || `R-${String(globalIdx + 1).padStart(4, '0')}`,
+        dosha: labels[i] || realRec?.dataset_label || 'Unknown',
       });
     }
     return pts;
-  }, [descriptive, matrixSize]);
+  }, [descriptive, realCases, matrixSize]);
 
   // 2D MDS plot points from embeddingsData
   const mdsPoints = useMemo(() => {
@@ -124,7 +112,7 @@ export default function OverviewPage({
       const doshaName = classes[doshaIdx] || 'Unknown';
       pts.push({
         idx: i,
-        caseId: `P-${String(i + 1).padStart(4, '0')}`,
+        caseId: realCases?.records?.[i]?.case_id || `R-${String(i + 1).padStart(4, '0')}`,
         x,
         y,
         cluster: clusterIdx,
@@ -132,19 +120,16 @@ export default function OverviewPage({
         color:
           scatterColorMode === 'cluster'
             ? CLUSTER_PALETTE[clusterIdx % CLUSTER_PALETTE.length]
-            : DOSHA_PALETTE[doshaName] || '#8C7866',
+            : DOSHA_PALETTE[doshaName] || '#967D63',
       });
     }
     return pts;
   }, [embeddingsData, activeMatrixMetric, realCases, clusteringsData, scatterColorMode]);
 
-  // Distance histogram details
-  const hist = descriptive?.distance_histograms?.[activeMatrixMetric] || descriptive?.distance_histograms?.gower;
-
   return (
     <div className="space-y-6">
       {/* 1. COMPACT HERO SECTION (<= 20% Desktop Viewport, Warm Beige & Glowing Wave Mockup Style) */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#cbbbae] via-[#bfad9a] to-[#9e8974] p-5 sm:p-6 text-white shadow-[0_12px_40px_-10px_rgba(145,120,95,0.22)] border border-[#e8ded2]/60">
+      <section className="relative overflow-hidden rounded-3xl hero-champagne-gradient p-5 sm:p-6 text-white shadow-[0_12px_40px_-10px_rgba(150,125,99,0.28)] border border-white/50">
         {/* Luminous Glowing Wave accent from reference mockup */}
         <svg
           className="pointer-events-none absolute inset-0 h-full w-full opacity-80"
@@ -362,8 +347,8 @@ export default function OverviewPage({
                     Prakriti Cohort Distribution (N = {realMeta.n_rows})
                   </h2>
                 </div>
-                <p className="text-xs text-[#705e4e] mt-1">
-                  Balanced clinical representation across 6 Ayurvedic constitutional types (200 patients per class).
+                <p className="text-xs text-[#827568] mt-1">
+                  Cohort representation across 6 dataset-provided Ayurvedic constitutional categories.
                 </p>
               </div>
               <span className="num text-xs font-semibold text-[#5c4a3b] bg-white/70 px-3 py-1 rounded-full border border-[#dccfbf]">
@@ -645,12 +630,12 @@ export default function OverviewPage({
                   >
                     {distanceMatrix.map((row, rIdx) =>
                       row.map((val, cIdx) => {
-                        // Normalize color between 0 and max (usually ~0.8)
-                        const norm = Math.min(1, Math.max(0, val / 0.85));
-                        // Light ivory (#fcf9f4) to deep espresso (#3a2c20)
-                        const bgLight = 248 - norm * 180;
-                        const bgMid = 240 - norm * 190;
-                        const bgDark = 230 - norm * 195;
+                        const maxScale = activeMatrixMetric === 'euclidean' ? 7.62 : 0.85;
+                        const norm = Math.min(1, Math.max(0, val / maxScale));
+                        // Light ivory (#F3EADF) to deep warm brown (#40382F)
+                        const bgLight = Math.round(243 - norm * 179);
+                        const bgMid = Math.round(234 - norm * 178);
+                        const bgDark = Math.round(223 - norm * 176);
                         const isHovered =
                           matrixHoveredCell &&
                           matrixHoveredCell.r === rIdx &&
@@ -669,8 +654,8 @@ export default function OverviewPage({
                               })
                             }
                             onMouseLeave={() => setMatrixHoveredCell(null)}
-                            className={`h-4 w-4 sm:h-5 sm:w-5 rounded-[2px] transition-transform cursor-pointer ${
-                              isHovered ? 'scale-125 z-10 ring-2 ring-amber-600' : 'hover:opacity-90'
+                            className={`h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-4.5 md:w-4.5 rounded-[2px] transition-transform cursor-pointer ${
+                              isHovered ? 'scale-125 z-10 ring-2 ring-[#967D63]' : 'hover:opacity-90'
                             }`}
                             style={{
                               backgroundColor: `rgb(${bgLight}, ${bgMid}, ${bgDark})`,
@@ -756,8 +741,8 @@ export default function OverviewPage({
             </div>
 
             {/* SVG MDS Scatter Viewport */}
-            <div className="relative flex justify-center bg-white/70 rounded-2xl border border-[#e3d7c7] p-3 overflow-hidden">
-              <svg width={360} height={240} viewBox="0 0 360 240" className="overflow-visible">
+            <div className="relative flex justify-center bg-white/70 rounded-2xl border border-[#C3A989]/30 p-3 overflow-hidden">
+              <svg viewBox="0 0 360 240" className="w-full max-w-[360px] h-auto overflow-visible">
                 {/* Background Grid */}
                 <rect x={10} y={10} width={340} height={220} fill="#fcfaf7" rx={8} stroke="#eae0d4" />
                 <line x1={10} y1={120} x2={350} y2={120} stroke="#f0e7db" strokeDasharray="3 3" />

@@ -11,11 +11,10 @@ import {
   YAxis,
 } from 'recharts';
 
-// Neutral + single accent palette for distance lines (Okabe-Ito reserved strictly for 6 Dosha classes)
 const LINE_STYLE = {
-  gower: { stroke: '#0F766E', dash: undefined, label: 'Gower' },
-  euclidean: { stroke: '#262626', dash: undefined, label: 'Euclidean' },
-  cosine: { stroke: '#737373', dash: '4 3', label: 'Cosine' },
+  gower: { stroke: '#967D63', dash: undefined, label: 'Gower' },
+  euclidean: { stroke: '#40382F', dash: undefined, label: 'Euclidean' },
+  cosine: { stroke: '#C3A989', dash: '4 3', label: 'Cosine' },
 };
 
 const SWEEP_TITLES = {
@@ -70,6 +69,10 @@ export default function ResultsPage({ realData, syntheticData }) {
   const [showSubsets, setShowSubsets] = useState(false);
   const [showSweepStats, setShowSweepStats] = useState(false);
 
+  if (!realData || !syntheticData) {
+    return <div className="glass-panel rounded-2xl p-8 text-sm text-[#827568]">Loading benchmark results…</div>;
+  }
+
   const fullMetrics = realData.full_29_traits.metrics;
   const metricNames = Object.keys(fullMetrics);
   const synthProv = syntheticData.provenance;
@@ -77,21 +80,21 @@ export default function ResultsPage({ realData, syntheticData }) {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-semibold text-neutral-900">Results</h1>
-        <p className="mt-2 text-sm text-neutral-600">
+        <h1 className="text-xl font-bold text-[#40382F]">Results</h1>
+        <p className="mt-2 text-sm text-[#827568]">
           All tables and charts below render directly from{' '}
-          <code className="num text-xs">results/real_data.json</code> and{' '}
-          <code className="num text-xs">results/synthetic.json</code>.
+          <code className="num text-xs text-[#40382F]">results/real_data.json</code> and{' '}
+          <code className="num text-xs text-[#40382F]">results/synthetic.json</code>.
         </p>
       </div>
 
       {/* (a) Real-Data Table */}
       <div className="paper-card overflow-hidden">
-        <div className="border-b border-neutral-200 px-6 py-4">
-          <h2 className="text-sm font-semibold text-neutral-900">
+        <div className="border-b border-[#E8DED1] px-6 py-4">
+          <h2 className="text-sm font-bold text-[#40382F]">
             (a) Real Categorical Data — Full Trait Evaluation
           </h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-[#827568]">
             kNN macro-F1 reported as mean ± std across repeated stratified CV folds; clustering at
             fixed average and complete linkage.
           </p>
@@ -100,46 +103,46 @@ export default function ResultsPage({ realData, syntheticData }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                <th className="py-3 pl-6 pr-3 font-medium">Metric</th>
-                <th className="px-3 py-3 text-right font-medium">kNN Macro-F1</th>
-                <th className="px-3 py-3 text-right font-medium">LOO Macro P@5</th>
-                <th className="px-3 py-3 text-right font-medium">ARI (Avg)</th>
-                <th className="px-3 py-3 text-right font-medium">NMI (Avg)</th>
-                <th className="px-3 py-3 text-right font-medium">ARI (Comp)</th>
-                <th className="px-3 py-3 text-right font-medium">NMI (Comp)</th>
-                <th className="py-3 pl-3 pr-6 text-right font-medium">Silhouette* (Avg / Comp)</th>
+              <tr className="border-b border-[#E8DED1] bg-[#F3EADF]/70 text-[#827568]">
+                <th className="py-3 pl-6 pr-3 font-semibold">Metric</th>
+                <th className="px-3 py-3 text-right font-semibold">kNN Macro-F1</th>
+                <th className="px-3 py-3 text-right font-semibold">LOO Macro P@5</th>
+                <th className="px-3 py-3 text-right font-semibold">ARI (Avg)</th>
+                <th className="px-3 py-3 text-right font-semibold">NMI (Avg)</th>
+                <th className="px-3 py-3 text-right font-semibold">ARI (Comp)</th>
+                <th className="px-3 py-3 text-right font-semibold">NMI (Comp)</th>
+                <th className="py-3 pl-3 pr-6 text-right font-semibold">Silhouette* (Avg / Comp)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-[#E8DED1]/70">
               {metricNames.map((m) => {
                 const ev = fullMetrics[m];
                 const avg = ev.clustering.linkages.average;
                 const comp = ev.clustering.linkages.complete;
                 return (
-                  <tr key={m} className="hover:bg-neutral-50">
-                    <td className="whitespace-nowrap py-3 pl-6 pr-3 font-medium capitalize text-neutral-900">
+                  <tr key={m} className="hover:bg-[#F3EADF]/50 transition">
+                    <td className="whitespace-nowrap py-3 pl-6 pr-3 font-semibold capitalize text-[#40382F]">
                       {m}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmtMS(ev.knn_cv.macro_f1_mean, ev.knn_cv.macro_f1_std)}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmt(ev.loo_retrieval.macro.p_at_5)}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmt(avg.ari)}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmt(avg.nmi)}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmt(comp.ari)}
                     </td>
-                    <td className="num whitespace-nowrap px-3 py-3 text-right text-neutral-800">
+                    <td className="num whitespace-nowrap px-3 py-3 text-right text-[#40382F]">
                       {fmt(comp.nmi)}
                     </td>
-                    <td className="num whitespace-nowrap py-3 pl-3 pr-6 text-right text-neutral-500">
+                    <td className="num whitespace-nowrap py-3 pl-3 pr-6 text-right text-[#827568]">
                       {fmt(avg.silhouette)} / {fmt(comp.silhouette)}
                     </td>
                   </tr>
@@ -149,9 +152,9 @@ export default function ResultsPage({ realData, syntheticData }) {
           </table>
         </div>
 
-        <div className="border-t border-neutral-200 bg-neutral-50 px-6 py-3 text-xs text-neutral-600 space-y-1">
+        <div className="border-t border-[#E8DED1] bg-[#F3EADF]/55 px-6 py-3 text-xs text-[#827568] space-y-1">
           <div>
-            *Silhouette: <strong>{fullMetrics.gower.clustering.silhouette_note}</strong>.
+            *Silhouette: <strong className="text-[#40382F]">{fullMetrics.gower.clustering.silhouette_note}</strong>.
           </div>
           <div>
             Three smallest classes (LOO P@1 / P@5 / P@10, identical across all three metrics):{' '}
@@ -159,7 +162,7 @@ export default function ResultsPage({ realData, syntheticData }) {
               ([cls, st], i) => (
                 <span key={cls}>
                   {i > 0 && ' · '}
-                  {cls}: <span className="num">{fmt(st.p_at_1)}</span> /{' '}
+                  <span className="text-[#40382F] font-medium">{cls}</span>: <span className="num">{fmt(st.p_at_1)}</span> /{' '}
                   <span className="num">{fmt(st.p_at_5)}</span> /{' '}
                   <span className="num">{fmt(st.p_at_10)}</span>
                 </span>
@@ -172,11 +175,11 @@ export default function ResultsPage({ realData, syntheticData }) {
 
       {/* (b) Equivalence Result + Collapsible Trait-Subset Table */}
       <div className="paper-card overflow-hidden">
-        <div className="border-b border-neutral-200 px-6 py-4">
-          <h2 className="text-sm font-semibold text-neutral-900">
+        <div className="border-b border-[#E8DED1] px-6 py-4">
+          <h2 className="text-sm font-bold text-[#40382F]">
             (b) Pairwise Metric Equivalence on Real Categorical Data
           </h2>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-[#827568]">
             Pairwise comparison across all four categorical-capable distances on the full real CSV.
           </p>
         </div>
@@ -184,30 +187,30 @@ export default function ResultsPage({ realData, syntheticData }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                <th className="py-2.5 pl-6 pr-3 font-medium">Metric A</th>
-                <th className="px-3 py-2.5 font-medium">Metric B</th>
-                <th className="px-3 py-2.5 text-right font-medium">Spearman ρ</th>
-                <th className="px-3 py-2.5 text-right font-medium">Max Abs Diff (Min-Max)</th>
-                <th className="py-2.5 pl-3 pr-6 text-right font-medium">Mean Top-5 Overlap</th>
+              <tr className="border-b border-[#E8DED1] bg-[#F3EADF]/70 text-[#827568]">
+                <th className="py-2.5 pl-6 pr-3 font-semibold">Metric A</th>
+                <th className="px-3 py-2.5 font-semibold">Metric B</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Spearman ρ</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Max Abs Diff (Min-Max)</th>
+                <th className="py-2.5 pl-3 pr-6 text-right font-semibold">Mean Top-5 Overlap</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
+            <tbody className="divide-y divide-[#E8DED1]/70">
               {realData.equivalence.map((r) => (
-                <tr key={`${r.metric_a}-${r.metric_b}`} className="hover:bg-neutral-50">
-                  <td className="py-2.5 pl-6 pr-3 font-medium capitalize text-neutral-900">
+                <tr key={`${r.metric_a}-${r.metric_b}`} className="hover:bg-[#F3EADF]/50 transition">
+                  <td className="py-2.5 pl-6 pr-3 font-semibold capitalize text-[#40382F]">
                     {r.metric_a}
                   </td>
-                  <td className="px-3 py-2.5 font-medium capitalize text-neutral-900">
+                  <td className="px-3 py-2.5 font-semibold capitalize text-[#40382F]">
                     {r.metric_b}
                   </td>
-                  <td className="num whitespace-nowrap px-3 py-2.5 text-right font-semibold text-teal-800">
+                  <td className="num whitespace-nowrap px-3 py-2.5 text-right font-bold text-[#967D63]">
                     {fmt(r.spearman_rho, 6)}
                   </td>
-                  <td className="num whitespace-nowrap px-3 py-2.5 text-right text-neutral-700">
+                  <td className="num whitespace-nowrap px-3 py-2.5 text-right text-[#827568]">
                     {fmt(r.max_abs_diff_minmax, 6)}
                   </td>
-                  <td className="num whitespace-nowrap py-2.5 pl-3 pr-6 text-right text-neutral-800">
+                  <td className="num whitespace-nowrap py-2.5 pl-3 pr-6 text-right text-[#40382F]">
                     {fmt(r.mean_top5_overlap, 4)}
                   </td>
                 </tr>
@@ -217,62 +220,62 @@ export default function ResultsPage({ realData, syntheticData }) {
         </div>
 
         {/* Collapsible Trait-Subset Sweep Table */}
-        <div className="border-t border-neutral-200">
+        <div className="border-t border-[#E8DED1]">
           <button
             type="button"
             onClick={() => setShowSubsets((v) => !v)}
-            className="flex w-full items-center justify-between px-6 py-3 text-left text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+            className="flex w-full items-center justify-between px-6 py-3 text-left text-xs font-semibold text-[#40382F] hover:bg-[#F3EADF]/50 transition"
           >
             <span className="inline-flex items-center gap-2">
               {showSubsets ? (
-                <ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+                <ChevronDown className="h-3.5 w-3.5 text-[#967D63]" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-500" />
+                <ChevronRight className="h-3.5 w-3.5 text-[#967D63]" />
               )}
               Trait-subset sweep with tied-distance counts (
               <span className="num">{realData.trait_subsets.subset_sizes.join(', ')}</span> traits)
             </span>
-            <span className="text-teal-700">{showSubsets ? 'Hide' : 'Show'}</span>
+            <span className="text-[#967D63]">{showSubsets ? 'Hide' : 'Show'}</span>
           </button>
 
           {showSubsets && (
-            <div className="overflow-x-auto border-t border-neutral-200">
+            <div className="overflow-x-auto border-t border-[#E8DED1]">
               <table className="w-full min-w-[820px] border-collapse text-left text-xs">
                 <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                    <th className="py-2 pl-6 pr-2 font-medium">m</th>
-                    <th className="px-2 py-2 font-medium">Metric</th>
-                    <th className="px-2 py-2 text-right font-medium">kNN Macro-F1</th>
-                    <th className="px-2 py-2 text-right font-medium">LOO P@5</th>
-                    <th className="px-2 py-2 text-right font-medium">ARI (Avg)</th>
-                    <th className="px-2 py-2 text-right font-medium">NMI (Avg)</th>
-                    <th className="px-2 py-2 text-right font-medium">Tied Pairs</th>
-                    <th className="py-2 pl-2 pr-6 text-right font-medium">Top-5 Tie Rows</th>
+                  <tr className="border-b border-[#E8DED1] bg-[#F3EADF]/70 text-[#827568]">
+                    <th className="py-2 pl-6 pr-2 font-semibold">m</th>
+                    <th className="px-2 py-2 font-semibold">Metric</th>
+                    <th className="px-2 py-2 text-right font-semibold">kNN Macro-F1</th>
+                    <th className="px-2 py-2 text-right font-semibold">LOO P@5</th>
+                    <th className="px-2 py-2 text-right font-semibold">ARI (Avg)</th>
+                    <th className="px-2 py-2 text-right font-semibold">NMI (Avg)</th>
+                    <th className="px-2 py-2 text-right font-semibold">Tied Pairs</th>
+                    <th className="py-2 pl-2 pr-6 text-right font-semibold">Top-5 Tie Rows</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100">
+                <tbody className="divide-y divide-[#E8DED1]/70">
                   {realData.trait_subsets.summary.map((r) => (
-                    <tr key={`${r.m_traits}-${r.metric}`}>
-                      <td className="num py-2 pl-6 pr-2 text-neutral-700">{r.m_traits}</td>
-                      <td className="px-2 py-2 font-medium capitalize text-neutral-900">
+                    <tr key={`${r.m_traits}-${r.metric}`} className="hover:bg-[#F3EADF]/40">
+                      <td className="num py-2 pl-6 pr-2 text-[#40382F]">{r.m_traits}</td>
+                      <td className="px-2 py-2 font-semibold capitalize text-[#40382F]">
                         {r.metric}
                       </td>
-                      <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-700">
+                      <td className="num whitespace-nowrap px-2 py-2 text-right text-[#40382F]">
                         {fmtMS(r.knn_macro_f1_mean, r.knn_macro_f1_std)}
                       </td>
-                      <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-700">
+                      <td className="num whitespace-nowrap px-2 py-2 text-right text-[#40382F]">
                         {fmtMS(r.loo_macro_p5_mean, r.loo_macro_p5_std)}
                       </td>
-                      <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-700">
+                      <td className="num whitespace-nowrap px-2 py-2 text-right text-[#40382F]">
                         {fmtMS(r.ari_average_mean, r.ari_average_std)}
                       </td>
-                      <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-700">
+                      <td className="num whitespace-nowrap px-2 py-2 text-right text-[#40382F]">
                         {fmtMS(r.nmi_average_mean, r.nmi_average_std)}
                       </td>
-                      <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-500">
+                      <td className="num whitespace-nowrap px-2 py-2 text-right text-[#827568]">
                         {Math.round(r.tied_distance_pairs_mean).toLocaleString()}
                       </td>
-                      <td className="num whitespace-nowrap py-2 pl-2 pr-6 text-right text-neutral-500">
+                      <td className="num whitespace-nowrap py-2 pl-2 pr-6 text-right text-[#827568]">
                         {r.top5_boundary_tie_rows_mean.toFixed(1)}
                       </td>
                     </tr>
@@ -284,16 +287,16 @@ export default function ResultsPage({ realData, syntheticData }) {
         </div>
       </div>
 
-      {/* (c) Synthetic Sweeps Small-Multiples Grid (kNN macro-F1 vs each factor, SIMULATED badge on every chart) */}
+      {/* (c) Synthetic Sweeps Small-Multiples Grid */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-base font-semibold text-neutral-900">
+            <h2 className="text-base font-bold text-[#40382F]">
               (c) Synthetic Mixed-Data Sweeps — kNN Macro-F1 Across Each Factor
             </h2>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-[#827568]">
               Mean across <span className="num">{synthProv.n_seeds_used}</span> seeds per cell.
-              Asterisk (<span className="num font-semibold">*</span>) marks a unique Holm-adjusted
+              Asterisk (<span className="num font-semibold text-[#40382F]">*</span>) marks a unique Holm-adjusted
               paired Wilcoxon winner (<span className="num">p &lt; 0.05</span> against both other
               metrics).
             </p>
@@ -317,10 +320,10 @@ export default function ResultsPage({ realData, syntheticData }) {
             return (
               <div key={sweepKey} className="paper-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="text-xs font-semibold text-neutral-900">
+                  <h3 className="text-xs font-bold text-[#40382F]">
                     {SWEEP_TITLES[sweepKey] || sweepKey}
                   </h3>
-                  <span className="shrink-0 rounded border border-teal-700/30 bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-800">
+                  <span className="shrink-0 rounded-full border border-[#C3A989]/60 bg-[#E8DED1]/80 px-2 py-0.5 text-[10px] font-semibold text-[#40382F]">
                     SIMULATED
                   </span>
                 </div>
@@ -328,25 +331,26 @@ export default function ResultsPage({ realData, syntheticData }) {
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={series} margin={{ top: 14, right: 12, left: -18, bottom: 2 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E8DED1" />
                       <XAxis
                         dataKey="x"
-                        tick={{ fill: '#525252', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                        tick={{ fill: '#827568', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                       />
                       <YAxis
                         domain={[0.3, 1]}
-                        tick={{ fill: '#525252', fontSize: 10, fontFamily: 'JetBrains Mono' }}
+                        tick={{ fill: '#827568', fontSize: 10, fontFamily: 'JetBrains Mono' }}
                       />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid #E5E7EB',
-                          borderRadius: '4px',
+                          backgroundColor: 'rgba(255, 252, 248, 0.95)',
+                          border: '1px solid #C3A989',
+                          borderRadius: '10px',
+                          color: '#40382F',
                           fontFamily: 'JetBrains Mono',
                           fontSize: '11px',
                         }}
                       />
-                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                      <Legend wrapperStyle={{ fontSize: '10px', color: '#40382F' }} />
                       {['gower', 'euclidean', 'cosine'].map((m) => (
                         <Line
                           key={m}
@@ -364,7 +368,7 @@ export default function ResultsPage({ realData, syntheticData }) {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="border-t border-neutral-100 pt-2 text-[11px] text-neutral-500">
+                <div className="border-t border-[#E8DED1] pt-2 text-[11px] text-[#827568]">
                   Sig. winners:{' '}
                   {series.map((pt, i) => (
                     <span key={pt.x}>
@@ -373,8 +377,8 @@ export default function ResultsPage({ realData, syntheticData }) {
                       <span
                         className={
                           pt.winner.startsWith('none')
-                            ? 'text-neutral-400'
-                            : 'font-medium capitalize text-neutral-800'
+                            ? 'text-[#C3A989]'
+                            : 'font-semibold capitalize text-[#40382F]'
                         }
                       >
                         {pt.winner.startsWith('none') ? 'n.s.' : `${pt.winner}*`}
@@ -392,52 +396,52 @@ export default function ResultsPage({ realData, syntheticData }) {
           <button
             type="button"
             onClick={() => setShowSweepStats((v) => !v)}
-            className="flex w-full items-center justify-between px-6 py-3 text-left text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+            className="flex w-full items-center justify-between px-6 py-3 text-left text-xs font-semibold text-[#40382F] hover:bg-[#F3EADF]/50 transition"
           >
             <span className="inline-flex items-center gap-2">
               {showSweepStats ? (
-                <ChevronDown className="h-3.5 w-3.5 text-neutral-500" />
+                <ChevronDown className="h-3.5 w-3.5 text-[#967D63]" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-500" />
+                <ChevronRight className="h-3.5 w-3.5 text-[#967D63]" />
               )}
               Pooled paired Wilcoxon + Holm statistics across synthetic sweeps (SIMULATED)
             </span>
-            <span className="text-teal-700">{showSweepStats ? 'Hide' : 'Show'}</span>
+            <span className="text-[#967D63]">{showSweepStats ? 'Hide' : 'Show'}</span>
           </button>
 
           {showSweepStats && (
-            <div className="overflow-x-auto border-t border-neutral-200">
+            <div className="overflow-x-auto border-t border-[#E8DED1]">
               <table className="w-full min-w-[780px] border-collapse text-left text-xs">
                 <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                    <th className="py-2 pl-6 pr-2 font-medium">Sweep</th>
-                    <th className="px-2 py-2 font-medium">Pair</th>
-                    <th className="px-2 py-2 text-right font-medium">kNN F1 Diff</th>
-                    <th className="px-2 py-2 text-right font-medium">Cohen dz</th>
-                    <th className="px-2 py-2 text-right font-medium">p (Holm)</th>
-                    <th className="py-2 pl-2 pr-6 text-right font-medium">ARI Avg Diff (p Holm)</th>
+                  <tr className="border-b border-[#E8DED1] bg-[#F3EADF]/70 text-[#827568]">
+                    <th className="py-2 pl-6 pr-2 font-semibold">Sweep</th>
+                    <th className="px-2 py-2 font-semibold">Pair</th>
+                    <th className="px-2 py-2 text-right font-semibold">kNN F1 Diff</th>
+                    <th className="px-2 py-2 text-right font-semibold">Cohen dz</th>
+                    <th className="px-2 py-2 text-right font-semibold">p (Holm)</th>
+                    <th className="py-2 pl-2 pr-6 text-right font-semibold">ARI Avg Diff (p Holm)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100">
+                <tbody className="divide-y divide-[#E8DED1]/70">
                   {Object.entries(syntheticData.sweeps).flatMap(([sKey, sInfo]) =>
                     sInfo.pooled_paired_stats.knn_macro_f1.pairwise.map((pr, idx) => {
                       const ariPr = sInfo.pooled_paired_stats.ari_average.pairwise[idx];
                       return (
-                        <tr key={`${sKey}-${pr.metric_a}-${pr.metric_b}`}>
-                          <td className="num py-2 pl-6 pr-2 text-neutral-700">{sKey}</td>
-                          <td className="whitespace-nowrap px-2 py-2 font-medium capitalize text-neutral-900">
+                        <tr key={`${sKey}-${pr.metric_a}-${pr.metric_b}`} className="hover:bg-[#F3EADF]/40">
+                          <td className="num py-2 pl-6 pr-2 text-[#40382F]">{sKey}</td>
+                          <td className="whitespace-nowrap px-2 py-2 font-semibold capitalize text-[#40382F]">
                             {pr.metric_a} vs {pr.metric_b}
                           </td>
-                          <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-800">
+                          <td className="num whitespace-nowrap px-2 py-2 text-right text-[#40382F]">
                             {fmt(pr.mean_diff, 4)}
                           </td>
-                          <td className="num whitespace-nowrap px-2 py-2 text-right text-neutral-700">
+                          <td className="num whitespace-nowrap px-2 py-2 text-right text-[#827568]">
                             {fmt(pr.cohen_dz, 3)}
                           </td>
-                          <td className="num whitespace-nowrap px-2 py-2 text-right font-medium text-neutral-900">
+                          <td className="num whitespace-nowrap px-2 py-2 text-right font-semibold text-[#40382F]">
                             {fmt(pr.p_holm, 4)}
                           </td>
-                          <td className="num whitespace-nowrap py-2 pl-2 pr-6 text-right text-neutral-700">
+                          <td className="num whitespace-nowrap py-2 pl-2 pr-6 text-right text-[#827568]">
                             {fmt(ariPr.mean_diff, 4)} ({fmt(ariPr.p_holm, 4)})
                           </td>
                         </tr>

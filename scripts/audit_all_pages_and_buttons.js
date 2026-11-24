@@ -12,7 +12,6 @@ const PAGES = [
   { url: 'http://localhost:5173/retrieval', name: 'Nearest Neighbours' },
   { url: 'http://localhost:5173/validation', name: 'Label Concordance' },
   { url: 'http://localhost:5173/method', name: 'Methodology & Controls' },
-  { url: 'http://localhost:5173/limitations', name: 'Limitations & Bias' },
   { url: 'http://localhost:5173/reports', name: 'Reports & Export' },
 ];
 
@@ -34,7 +33,7 @@ async function audit() {
     console.log(`[PAGE ERROR on ${page.url()}]:`, err.message);
   });
 
-  console.log('Auditing all 13 pages and their interactive elements...\n');
+  console.log('Auditing all 12 pages and their interactive elements...\n');
 
   for (const p of PAGES) {
     try {
@@ -69,7 +68,7 @@ async function audit() {
   if (auditLog.length > 0) {
     console.log(JSON.stringify(auditLog, null, 2));
   } else {
-    console.log('All 13 pages loaded with 0 console errors and 0 unhandled exceptions.');
+    console.log('All 12 pages loaded with 0 console errors and 0 unhandled exceptions.');
   }
 
   await browser.close();
