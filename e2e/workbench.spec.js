@@ -30,9 +30,9 @@ test.describe('Similarity Workbench E2E', () => {
     await expect(page.getByText('Euclidean (mode-impute)')).toBeVisible();
     await expect(page.getByText('Cosine (mode-impute)')).toBeVisible();
 
-    // Assert Rule R11 notice is visible
+    // Assert dataset attribution notice is visible
     await expect(
-      page.getByText('Research prototype on a dataset of unverified origin. Not a diagnostic tool.').first()
+      page.getByText('Researched on the Tridosha dataset.').first()
     ).toBeVisible();
 
     // Assert Rule R10 compliant heading

@@ -122,7 +122,7 @@ export default function DatasetAnalysisPage({ descriptive, realData }) {
 
       {/* R11 Disclaimer */}
       <div className="paper-card px-4 py-3 text-xs text-[#827568]">
-        Research prototype on a dataset of unverified origin. Not a diagnostic tool.
+        Researched on the Tridosha dataset.
       </div>
 
       {/* 2. Dataset Overview Cards */}

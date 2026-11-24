@@ -42,7 +42,7 @@ export default function DiagnosticValidationPage({ realData, descriptive }) {
           Research Prototype &amp; Provenance Disclaimer (R10, R11):
         </p>
         <p>
-          Research prototype on a dataset of unverified origin. Not a diagnostic tool.
+          Researched on the Tridosha dataset.
           The dataset labels originate from an unverified public repository and appear to be a
           deterministic function of the 29 traits (100% cross-validation accuracy with random forest).
           Neighbor-based outputs represent <em>labels of nearest dataset records</em>, not a clinical

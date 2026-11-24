@@ -25,6 +25,8 @@ import {
   X,
 } from 'lucide-react';
 import OverviewPage from './components/OverviewPage';
+import PatientRegistryPage from './components/PatientRegistryPage';
+import BenchmarkLabPage from './components/BenchmarkLabPage';
 import WorkbenchPage from './components/WorkbenchPage';
 import DataPage from './components/DataPage';
 import MethodPage from './components/MethodPage';
@@ -38,7 +40,13 @@ import DiagnosticValidationPage from './components/DiagnosticValidationPage';
 import ReportsExportPage from './components/ReportsExportPage';
 import { parseCsvSummary } from './utils/distanceEngine';
 
-export const NAV_SECTIONS = [
+export const TOP_TABS = [
+  { id: 'workbench', label: 'Similarity Workbench', path: '/workbench', section: 'Clinical PCRMS', icon: UserPlus },
+  { id: 'registry', label: 'Patient Case Registry', path: '/registry', section: 'Cohort Directory', icon: Database },
+  { id: 'lab', label: 'ML Benchmark & Validation Lab', path: '/lab', section: 'Analytics & Proofs', icon: FlaskConical },
+];
+
+const NAV_SECTIONS = [
   {
     title: 'DASHBOARD & METRICS',
     items: [
@@ -93,14 +101,22 @@ function AppLayout({ state }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [commandOpen]);
 
-  // Find active item
-  const currentPath = location.pathname === '/' ? '/overview' : location.pathname;
+  // Find active item (Workbench is default root view)
+  const currentPath = location.pathname === '/' ? '/workbench' : location.pathname;
 
-  // Flatten nav items for breadcrumbs & command search
-  const allNavItems = NAV_SECTIONS.flatMap((sec) =>
-    sec.items.map((it) => ({ ...it, section: sec.title }))
-  );
-  const activeNavItem = allNavItems.find((it) => it.path === currentPath);
+  // Combine 3 primary PCRMS tabs + secondary deep-dive routes for breadcrumbs & command search
+  const allNavItems = [
+    ...TOP_TABS,
+    ...NAV_SECTIONS.flatMap((sec) =>
+      sec.items
+        .filter((it) => !TOP_TABS.some((t) => t.path === it.path))
+        .map((it) => ({ ...it, section: sec.title }))
+    ),
+  ];
+  const activeNavItem =
+    TOP_TABS.find((t) => t.path === currentPath) ||
+    allNavItems.find((it) => it.path === currentPath) ||
+    TOP_TABS[0];
 
   // Filter items in command palette
   const filteredCommandItems = allNavItems.filter((it) =>
@@ -110,107 +126,98 @@ function AppLayout({ state }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F3EADF] via-[#EFE5D8] to-[#E8DED1] text-[#40382F] flex flex-col font-sans selection:bg-[#C3A989]/30 selection:text-[#40382F]">
-      {/* Executive Top Navigation Header (Sticky, Full-Width, Glassmorphic) */}
-      <header className="sticky top-0 z-30 w-full bg-[#F3EADF]/85 backdrop-blur-md border-b border-white/70 shadow-[0_4px_20px_-4px_rgba(150,125,99,0.12)] transition-all">
-        {/* Tier 1: Platform Branding & Primary Actions */}
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      {/* Executive Top Navigation Header (Sticky, Full-Width, Glassmorphic, Clean 3-Tab PCRMS Nav) */}
+      <header className="sticky top-0 z-30 w-full bg-[#F3EADF]/90 backdrop-blur-md border-b border-white/70 shadow-[0_4px_20px_-4px_rgba(150,125,99,0.12)] transition-all">
+        <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3">
           {/* Brand Identity */}
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => navigate('/overview')}
+              onClick={() => navigate('/workbench')}
               className="flex items-center gap-2.5 text-left group shrink-0"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#967D63] to-[#40382F] text-[#F3EADF] font-extrabold text-sm shadow-sm group-hover:opacity-95 transition">
-                AY
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/85 border border-[#C3A989]/50 p-1 shadow-2xs group-hover:opacity-95 transition shrink-0">
+                <img
+                  src="/logo.png"
+                  alt="AyurSimilarity PCRMS Logo"
+                  className="h-full w-full object-contain"
+                />
               </div>
               <div>
                 <div className="text-xs font-bold tracking-tight text-[#40382F] uppercase leading-tight group-hover:text-[#967D63] transition">
-                  AyurSimilarity
+                  AyurSimilarity PCRMS
                 </div>
                 <div className="text-[10px] text-[#827568] font-medium leading-none">
-                  Clinical Intelligence Platform
+                  Ayurvedic Clinical Intelligence
                 </div>
               </div>
             </button>
 
-            <span className="text-[#C3A989] hidden sm:inline">|</span>
+            <span className="text-[#C3A989] hidden xl:inline">|</span>
 
-            <div className="hidden sm:flex items-center gap-2 shrink-0">
-              <span className="flex h-2 w-2 rounded-full bg-[#967D63] ring-4 ring-[#E8DED1] animate-pulse shrink-0" />
-              <span className="whitespace-nowrap rounded-full bg-white/65 border border-white/80 px-3 py-0.5 text-xs font-semibold text-[#40382F] shadow-2xs">
-                N = <span className="num">1200</span> Records · <span className="num">29</span> Traits
+            <div className="hidden xl:flex items-center gap-2 shrink-0">
+              <span className="flex h-2 w-2 rounded-full bg-[#967D63] ring-4 ring-[#E8DED1] shrink-0" />
+              <span className="whitespace-nowrap rounded-full bg-white/65 border border-white/80 px-2.5 py-0.5 text-[11px] font-semibold text-[#40382F] shadow-2xs">
+                N = <span className="num">1200</span> · <span className="num">29</span> Traits
               </span>
             </div>
           </div>
 
-          {/* Quick Actions & Command Center */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Clean 3-Tab Top Navigation Bar */}
+          <nav
+            aria-label="Primary navigation"
+            className="order-3 lg:order-2 w-full lg:w-auto flex flex-wrap items-center justify-center gap-1 bg-white/60 backdrop-blur-sm p-1 rounded-2xl sm:rounded-full border border-white/80 shadow-2xs"
+          >
+            {TOP_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isTabActive =
+                (tab.id === 'workbench' && (currentPath === '/' || currentPath === '/workbench')) ||
+                (tab.id === 'registry' && ['/registry', '/data', '/retrieval'].includes(currentPath)) ||
+                (tab.id === 'lab' &&
+                  [
+                    '/lab',
+                    '/overview',
+                    '/comparison',
+                    '/results',
+                    '/clustering',
+                    '/dataset',
+                    '/attributes',
+                    '/validation',
+                    '/method',
+                    '/reports',
+                  ].includes(currentPath));
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => navigate(tab.path)}
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition whitespace-nowrap ${
+                    isTabActive
+                      ? 'bg-[#40382F] text-[#F3EADF] font-semibold shadow-xs'
+                      : 'text-[#6A5E52] hover:bg-white/90 hover:text-[#40382F]'
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${isTabActive ? 'text-[#C3A989]' : 'text-[#967D63]'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Compact Utility Actions */}
+          <div className="order-2 lg:order-3 flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setCommandOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/65 px-3 sm:px-3.5 py-1.5 text-xs text-[#827568] hover:bg-white/90 hover:text-[#40382F] transition shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-3 py-1.5 text-xs text-[#827568] hover:bg-white hover:text-[#40382F] transition shadow-2xs"
+              title="Quick jump across tabs & modules"
             >
               <Search className="h-3.5 w-3.5 text-[#967D63]" />
-              <span className="hidden lg:inline">Search analytics, metrics, patients...</span>
-              <span className="lg:hidden">Search</span>
-              <kbd className="hidden sm:inline rounded-full border border-[#C3A989]/50 bg-[#F3EADF] px-2 py-0.5 text-[10px] font-semibold text-[#40382F]">
-                ⌘K
+              <span className="hidden sm:inline">Quick Jump</span>
+              <kbd className="hidden md:inline rounded-full border border-[#C3A989]/50 bg-[#F3EADF] px-2 py-0.5 text-[10px] font-mono font-semibold text-[#40382F] whitespace-nowrap">
+                Ctrl+K
               </kbd>
             </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/workbench')}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#40382F] hover:bg-[#967D63] px-3.5 sm:px-4 py-1.5 text-xs font-semibold text-[#F3EADF] transition shadow-sm whitespace-nowrap"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Intake &amp; Predict</span>
-              <span className="sm:hidden">Intake</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/reports')}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 hover:bg-white px-3.5 py-1.5 text-xs font-medium text-[#40382F] transition shadow-xs whitespace-nowrap"
-            >
-              <FileDown className="h-3.5 w-3.5 text-[#967D63]" />
-              <span>Export</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tier 2: Responsive Segmented Glass Navigation Ribbon */}
-        <div className="border-t border-[#C3A989]/25 bg-[#E8DED1]/55 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="mx-auto w-full max-w-7xl">
-            <nav aria-label="Primary navigation" className="flex flex-wrap items-center gap-1.5">
-              {NAV_SECTIONS.map((sec) => (
-                <div
-                  key={sec.title}
-                  className="flex flex-wrap items-center gap-0.5 bg-white/55 backdrop-blur-sm p-0.5 rounded-2xl sm:rounded-full border border-white/75 shadow-2xs"
-                >
-                  {sec.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = currentPath === item.path;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => navigate(item.path)}
-                        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition whitespace-nowrap ${
-                          isActive
-                            ? 'bg-[#40382F] text-[#F3EADF] font-semibold shadow-xs'
-                            : 'text-[#827568] hover:bg-white/80 hover:text-[#40382F]'
-                        }`}
-                      >
-                        <Icon className={`h-3 w-3 shrink-0 ${isActive ? 'text-[#C3A989]' : 'text-[#967D63]'}`} />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
           </div>
         </div>
       </header>
@@ -296,26 +303,22 @@ function AppLayout({ state }) {
         </div>
       )}
 
-      {/* Main Full-Width Content Viewport (Zero Left Sidebar Margin) */}
+      {/* Main Full-Width Content Viewport */}
       <div className="flex-1 w-full min-h-screen flex flex-col">
-        <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1">
+        <main className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 py-5 flex-1">
           {/* Clinical Breadcrumb Trail */}
-          <nav aria-label="Breadcrumbs" className="mb-5 flex flex-wrap items-center justify-between gap-2 text-xs text-[#827568] border-b border-[#C3A989]/30 pb-3">
+          <nav aria-label="Breadcrumbs" className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-[#827568] border-b border-[#C3A989]/30 pb-2.5">
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => navigate('/overview')}
+                onClick={() => navigate('/workbench')}
                 className="font-medium text-[#827568] hover:text-[#40382F] transition"
               >
-                AyurSimilarity Portal
+                AyurSimilarity PCRMS
               </button>
               <ChevronRight className="h-3.5 w-3.5 text-[#C3A989] shrink-0" />
-              <span className="font-medium text-[#827568]">
-                {activeNavItem?.section || 'Research Analytics'}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 text-[#C3A989] shrink-0" />
               <span className="font-semibold text-[#40382F] bg-white/75 border border-white/80 rounded-full px-2.5 py-0.5 shadow-2xs">
-                {activeNavItem?.label || 'Overview'}
+                {activeNavItem?.label || 'Similarity Workbench'}
               </span>
             </div>
 
@@ -345,7 +348,43 @@ function AppLayout({ state }) {
 
           {state.payload && (
             <Routes>
-              <Route path="/" element={<Navigate to="/overview" replace />} />
+              <Route path="/" element={<Navigate to="/workbench" replace />} />
+              <Route
+                path="/workbench"
+                element={
+                  <WorkbenchPage
+                    realData={state.payload.realData}
+                    realCases={state.payload.realCases}
+                  />
+                }
+              />
+              <Route
+                path="/registry"
+                element={
+                  <PatientRegistryPage
+                    realData={state.payload.realData}
+                    realCases={state.payload.realCases}
+                    synthRecords={state.payload.synthRecords}
+                    synthCsvSummary={state.payload.synthCsvSummary}
+                  />
+                }
+              />
+              <Route
+                path="/lab"
+                element={
+                  <BenchmarkLabPage
+                    realData={state.payload.realData}
+                    syntheticData={state.payload.syntheticData}
+                    expertReview={state.payload.expertReview}
+                    realCases={state.payload.realCases}
+                    descriptive={state.payload.descriptive}
+                    missingnessData={state.payload.missingnessData}
+                    scalingAblation={state.payload.scalingAblation}
+                    clusteringsData={state.payload.clusteringsData}
+                    embeddingsData={state.payload.embeddingsData}
+                  />
+                }
+              />
               <Route
                 path="/overview"
                 element={
@@ -361,7 +400,6 @@ function AppLayout({ state }) {
                   />
                 }
               />
-              <Route path="/workbench" element={<WorkbenchPage />} />
               <Route
                 path="/dataset"
                 element={
@@ -453,22 +491,22 @@ function AppLayout({ state }) {
                   />
                 }
               />
-              <Route path="*" element={<Navigate to="/overview" replace />} />
+              <Route path="*" element={<Navigate to="/workbench" replace />} />
             </Routes>
           )}
         </main>
 
-        {/* Global Research Prototype Footer (Rule R11) */}
-        <footer className="w-full border-t border-white/70 bg-[#F3EADF]/85 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 mt-auto">
-          <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#827568]">
+        {/* Global Application Footer */}
+        <footer className="w-full border-t border-white/70 bg-[#F3EADF]/85 backdrop-blur-md py-3.5 px-4 sm:px-6 lg:px-8 mt-auto">
+          <div className="mx-auto max-w-[1440px] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#827568]">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[#967D63]" />
-              <span className="font-medium text-[#40382F]">AyurSimilarity Research Platform</span>
+              <span className="font-medium text-[#40382F]">AyurSimilarity PCRMS</span>
               <span className="text-[#C3A989]">·</span>
               <span>Categorical Parity Benchmark</span>
             </div>
-            <p className="text-[11px] text-[#827568] text-center sm:text-right">
-              Research prototype on a dataset of unverified origin. Not a diagnostic tool.
+            <p className="text-xs text-[#6A5E52] font-medium text-center sm:text-right">
+              Researched on the Tridosha dataset.
             </p>
           </div>
         </footer>
@@ -495,6 +533,7 @@ export default function App() {
           scalingAblationRes,
           clusteringsRes,
           embeddingsRes,
+          synthRecordsRes,
         ] = await Promise.all([
           fetch('/data/real_data.json'),
           fetch('/data/synthetic.json'),
@@ -506,11 +545,12 @@ export default function App() {
           fetch('/data/synthetic_scaling_ablation.json'),
           fetch('/data/clusterings.json'),
           fetch('/data/embeddings.json'),
+          fetch('/data/synthetic_records.json'),
         ]);
 
         for (const res of [
           realRes, synthRes, expertRes, casesRes, synthCsvRes,
-          descriptiveRes, missingnessRes, scalingAblationRes, clusteringsRes, embeddingsRes,
+          descriptiveRes, missingnessRes, scalingAblationRes, clusteringsRes, embeddingsRes, synthRecordsRes,
         ]) {
           if (!res.ok) throw new Error(`Failed to fetch ${res.url} (HTTP ${res.status})`);
         }
@@ -526,6 +566,7 @@ export default function App() {
           scalingAblation,
           clusteringsData,
           embeddingsData,
+          synthRecords,
         ] = await Promise.all([
           realRes.json(),
           synthRes.json(),
@@ -537,6 +578,7 @@ export default function App() {
           scalingAblationRes.json(),
           clusteringsRes.json(),
           embeddingsRes.json(),
+          synthRecordsRes.json(),
         ]);
 
         const synthCsvSummary = parseCsvSummary(synthCsvText);
@@ -556,6 +598,7 @@ export default function App() {
               scalingAblation,
               clusteringsData,
               embeddingsData,
+              synthRecords,
             },
           });
         }

@@ -144,7 +144,7 @@ export default function ReportsExportPage({ realData, syntheticData, missingness
           Client-Side Data Privacy Notice (R11, R13):
         </p>
         <p>
-          Research prototype on a dataset of unverified origin. Not a diagnostic tool.
+          Researched on the Tridosha dataset.
           All exports and reports are generated entirely client-side inside your browser session.
           No patient case queries or entered data are ever transmitted to any external server.
         </p>
