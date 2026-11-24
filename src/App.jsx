@@ -144,24 +144,24 @@ function AppLayout({ state }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#f7f3ed] text-[#2b221a] flex flex-col font-sans selection:bg-[#e4d7c6] selection:text-[#2b221a]">
       {/* Enterprise Top Navigation Bar */}
       <header
         style={{ left: sidebarWidth }}
-        className="fixed top-0 right-0 z-20 h-16 bg-white/95 backdrop-blur border-b border-slate-200/80 transition-all duration-200 flex items-center justify-between px-6 shadow-xs"
+        className="fixed top-0 right-0 z-20 h-16 bg-[#faf7f2]/90 backdrop-blur-md border-b border-[#e2d5c3]/80 transition-all duration-200 flex items-center justify-between px-6 shadow-xs"
       >
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-              Live Research Analytics Portal
+            <span className="flex h-2.5 w-2.5 rounded-full bg-amber-600 ring-4 ring-amber-200/50 animate-pulse" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#5c4a3b]">
+              Clinical Intelligence Portal
             </span>
           </div>
-          <span className="text-slate-300">|</span>
-          <span className="rounded-md bg-emerald-50 border border-emerald-200/60 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+          <span className="text-[#d5c7b5]">|</span>
+          <span className="rounded-full bg-[#efe8dc] border border-[#d8cabb] px-3 py-0.5 text-xs font-medium text-[#4a3a2d]">
             N = <span className="num">1200</span> Records · <span className="num">29</span> Traits
           </span>
-          <span className="hidden lg:inline-flex rounded-md bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+          <span className="hidden lg:inline-flex rounded-full bg-[#efe8dc]/80 border border-[#d8cabb] px-3 py-0.5 text-xs font-medium text-[#5c4a3b]">
             Client-Side Distance Engine v2.0
           </span>
         </div>
@@ -171,12 +171,12 @@ function AppLayout({ state }) {
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="hidden md:inline-flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition shadow-2xs"
+            className="hidden md:inline-flex items-center gap-2.5 rounded-full border border-[#dccfbf] bg-white/70 px-3.5 py-1.5 text-xs text-[#6e5b4b] hover:bg-white hover:text-[#2b221a] transition shadow-2xs"
           >
-            <Search className="h-3.5 w-3.5 text-slate-400" />
+            <Search className="h-3.5 w-3.5 text-[#8c7866]" />
             <span className="hidden xl:inline">Search analytics, metrics, or patients...</span>
             <span className="xl:hidden">Search...</span>
-            <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 shadow-2xs">
+            <kbd className="rounded-full border border-[#cfbeab] bg-[#f7f3ed] px-2 py-0.5 text-[10px] font-semibold text-[#5c4a3b] shadow-2xs">
               ⌘K
             </kbd>
           </button>
@@ -184,18 +184,18 @@ function AppLayout({ state }) {
           <button
             type="button"
             onClick={() => navigate('/workbench')}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3.5 py-1.5 text-xs font-semibold text-white transition shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#3d3126] hover:bg-[#282019] px-4 py-1.5 text-xs font-semibold text-[#fbf8f4] transition shadow-sm"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            Patient Intake & Predict
+            Patient Intake &amp; Predict
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/reports')}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[#dccfbf] bg-white/80 hover:bg-white px-3.5 py-1.5 text-xs font-medium text-[#5c4a3b] transition shadow-xs"
           >
-            <FileDown className="h-3.5 w-3.5 text-slate-500" />
+            <FileDown className="h-3.5 w-3.5 text-[#7c6957]" />
             Export
           </button>
         </div>
@@ -432,6 +432,9 @@ function AppLayout({ state }) {
                     syntheticData={state.payload.syntheticData}
                     expertReview={state.payload.expertReview}
                     realCases={state.payload.realCases}
+                    descriptive={state.payload.descriptive}
+                    clusteringsData={state.payload.clusteringsData}
+                    embeddingsData={state.payload.embeddingsData}
                     onNavigate={(pageId) => navigate(pageId.startsWith('/') ? pageId : `/${pageId}`)}
                   />
                 }
