@@ -98,9 +98,9 @@ function setCollapsedStorage(value) {
 }
 
 function AppLayout({ state }) {
-  const [collapsed, setCollapsed] = useState(getInitialCollapsed);
   const [commandOpen, setCommandOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSectionFilter, setActiveSectionFilter] = useState('ALL'); // 'ALL' or section title
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -117,16 +117,6 @@ function AppLayout({ state }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [commandOpen]);
-
-  function toggleSidebar() {
-    setCollapsed((prev) => {
-      const next = !prev;
-      setCollapsedStorage(next);
-      return next;
-    });
-  }
-
-  const sidebarWidth = collapsed ? 68 : 260;
 
   // Find active item
   const currentPath = location.pathname === '/' ? '/overview' : location.pathname;
@@ -145,59 +135,111 @@ function AppLayout({ state }) {
 
   return (
     <div className="min-h-screen bg-[#f7f3ed] text-[#2b221a] flex flex-col font-sans selection:bg-[#e4d7c6] selection:text-[#2b221a]">
-      {/* Enterprise Top Navigation Bar */}
-      <header
-        style={{ left: sidebarWidth }}
-        className="fixed top-0 right-0 z-20 h-16 bg-[#faf7f2]/90 backdrop-blur-md border-b border-[#e2d5c3]/80 transition-all duration-200 flex items-center justify-between px-6 shadow-xs"
-      >
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-amber-600 ring-4 ring-amber-200/50 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#5c4a3b]">
-              Clinical Intelligence Portal
-            </span>
+      {/* Executive Top Navigation Header (Sticky, Full-Width, Glassmorphic) */}
+      <header className="sticky top-0 z-30 w-full bg-[#faf7f2]/95 backdrop-blur-md border-b border-[#e2d5c3]/80 shadow-xs transition-all">
+        {/* Tier 1: Platform Branding & Primary Actions */}
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Brand Identity */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/overview')}
+              className="flex items-center gap-2.5 text-left group"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#3d3126] text-[#faf7f2] font-extrabold text-sm shadow-sm group-hover:bg-[#282019] transition">
+                AY
+              </div>
+              <div>
+                <div className="text-xs font-bold tracking-tight text-[#2b221a] uppercase leading-tight group-hover:text-amber-900 transition">
+                  AyurSimilarity
+                </div>
+                <div className="text-[10px] text-[#786655] font-medium leading-none">
+                  Clinical Intelligence Platform
+                </div>
+              </div>
+            </button>
+
+            <span className="text-[#d8cbb9] hidden sm:inline">|</span>
+
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-600 ring-4 ring-emerald-100 animate-pulse" />
+              <span className="rounded-full bg-[#ede4d8] border border-[#d8cabb] px-3 py-0.5 text-xs font-semibold text-[#4a3a2d]">
+                N = <span className="num">1200</span> Records · <span className="num">29</span> Traits
+              </span>
+            </div>
           </div>
-          <span className="text-[#d5c7b5]">|</span>
-          <span className="rounded-full bg-[#efe8dc] border border-[#d8cabb] px-3 py-0.5 text-xs font-medium text-[#4a3a2d]">
-            N = <span className="num">1200</span> Records · <span className="num">29</span> Traits
-          </span>
-          <span className="hidden lg:inline-flex rounded-full bg-[#efe8dc]/80 border border-[#d8cabb] px-3 py-0.5 text-xs font-medium text-[#5c4a3b]">
-            Client-Side Distance Engine v2.0
-          </span>
+
+          {/* Quick Actions & Command Center */}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setCommandOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-[#dccfbf] bg-white/75 px-3.5 py-1.5 text-xs text-[#6e5b4b] hover:bg-white hover:text-[#2b221a] transition shadow-2xs"
+            >
+              <Search className="h-3.5 w-3.5 text-[#8c7866]" />
+              <span className="hidden md:inline">Search analytics, metrics, patients...</span>
+              <span className="md:hidden">Search</span>
+              <kbd className="rounded-full border border-[#cfbeab] bg-[#f7f3ed] px-2 py-0.5 text-[10px] font-semibold text-[#5c4a3b] shadow-2xs">
+                ⌘K
+              </kbd>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/workbench')}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#3d3126] hover:bg-[#282019] px-4 py-1.5 text-xs font-semibold text-[#fbf8f4] transition shadow-sm"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span>Intake &amp; Predict</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/reports')}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#dccfbf] bg-white/80 hover:bg-white px-3.5 py-1.5 text-xs font-medium text-[#5c4a3b] transition shadow-xs"
+            >
+              <FileDown className="h-3.5 w-3.5 text-[#7c6957]" />
+              <span>Export</span>
+            </button>
+          </div>
         </div>
 
-        {/* Global Quick Action & Search Center */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setCommandOpen(true)}
-            className="hidden md:inline-flex items-center gap-2.5 rounded-full border border-[#dccfbf] bg-white/70 px-3.5 py-1.5 text-xs text-[#6e5b4b] hover:bg-white hover:text-[#2b221a] transition shadow-2xs"
-          >
-            <Search className="h-3.5 w-3.5 text-[#8c7866]" />
-            <span className="hidden xl:inline">Search analytics, metrics, or patients...</span>
-            <span className="xl:hidden">Search...</span>
-            <kbd className="rounded-full border border-[#cfbeab] bg-[#f7f3ed] px-2 py-0.5 text-[10px] font-semibold text-[#5c4a3b] shadow-2xs">
-              ⌘K
-            </kbd>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/workbench')}
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#3d3126] hover:bg-[#282019] px-4 py-1.5 text-xs font-semibold text-[#fbf8f4] transition shadow-sm"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Patient Intake &amp; Predict
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/reports')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#dccfbf] bg-white/80 hover:bg-white px-3.5 py-1.5 text-xs font-medium text-[#5c4a3b] transition shadow-xs"
-          >
-            <FileDown className="h-3.5 w-3.5 text-[#7c6957]" />
-            Export
-          </button>
+        {/* Tier 2: Horizontal Segmented Glass Navigation Ribbon */}
+        <div className="border-t border-[#ebe0d3] bg-[#f5ede2]/80 px-4 sm:px-6 lg:px-8 py-2 overflow-x-auto no-scrollbar">
+          <div className="mx-auto w-full max-w-7xl flex items-center justify-between gap-4 min-w-max">
+            {/* Section Category Pills */}
+            <div className="flex items-center gap-1">
+              {NAV_SECTIONS.map((sec) => {
+                const isSectionActive = activeNavItem?.section === sec.title;
+                return (
+                  <div key={sec.title} className="flex items-center">
+                    <div className="flex items-center gap-1 bg-white/50 p-0.5 rounded-full border border-[#e2d5c3]">
+                      {sec.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = currentPath === item.path;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => navigate(item.path)}
+                            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
+                              isActive
+                                ? 'bg-[#3d3126] text-[#faf7f2] font-semibold shadow-xs'
+                                : 'text-[#6c5a4b] hover:bg-white/80 hover:text-[#2b221a]'
+                            }`}
+                          >
+                            <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-amber-200' : 'text-[#8c7866]'}`} />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <span className="mx-1.5 text-[#d8cbb9] font-light">/</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -210,34 +252,34 @@ function AppLayout({ state }) {
           onClick={() => setCommandOpen(false)}
         >
           <div
-            className="w-full max-w-xl rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            className="w-full max-w-xl rounded-2xl border border-[#dccfbf] bg-white shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 bg-slate-50/60">
-              <Search className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-3 border-b border-[#e5dcce] px-4 py-3 bg-[#faf7f2]">
+              <Search className="h-4 w-4 text-amber-800 shrink-0" />
               <input
                 type="text"
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Jump to page, patient intake, or distance metrics..."
-                className="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 focus:outline-hidden"
+                className="w-full bg-transparent text-sm text-[#2b221a] placeholder-[#9c8978] focus:outline-hidden"
               />
               <button
                 type="button"
                 onClick={() => setCommandOpen(false)}
-                className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                className="rounded-full p-1 text-[#8c7866] hover:bg-[#ede3d5] hover:text-[#2b221a]"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="max-h-80 overflow-y-auto p-2 space-y-1">
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Navigation &amp; Analytics
+              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#8c7866]">
+                Clinical Modules &amp; Pages
               </div>
               {filteredCommandItems.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-500">
+                <div className="py-8 text-center text-xs text-[#806e5e]">
                   No matching destinations found for &quot;{searchQuery}&quot;
                 </div>
               ) : (
@@ -251,15 +293,15 @@ function AppLayout({ state }) {
                         navigate(it.path);
                         setCommandOpen(false);
                       }}
-                      className="flex items-center justify-between w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-emerald-50/80 hover:text-emerald-900 transition group"
+                      className="flex items-center justify-between w-full rounded-xl px-3 py-2 text-left text-xs hover:bg-[#f3ece0] hover:text-[#2b221a] transition group"
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 text-slate-400 group-hover:text-emerald-700" />
-                        <span className="font-medium text-slate-800 group-hover:text-emerald-950">
+                        <Icon className="h-4 w-4 text-[#8c7866] group-hover:text-amber-900" />
+                        <span className="font-semibold text-[#3b2d21] group-hover:text-[#2b221a]">
                           {it.label}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400 group-hover:text-emerald-700">
+                      <span className="text-[10px] text-[#8c7866] group-hover:text-amber-800">
                         {it.section}
                       </span>
                     </button>
@@ -268,138 +310,45 @@ function AppLayout({ state }) {
               )}
             </div>
 
-            <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500">
+            <div className="border-t border-[#ede4d8] bg-[#faf7f2] px-4 py-2 flex items-center justify-between text-[11px] text-[#786655]">
               <div className="flex items-center gap-2">
                 <span>Select</span>
-                <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[9px] font-mono shadow-2xs">Enter</kbd>
+                <kbd className="rounded border border-[#dccfbf] bg-white px-1 py-0.5 text-[9px] font-mono shadow-2xs">Enter</kbd>
                 <span>Close</span>
-                <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 text-[9px] font-mono shadow-2xs">Esc</kbd>
+                <kbd className="rounded border border-[#dccfbf] bg-white px-1 py-0.5 text-[9px] font-mono shadow-2xs">Esc</kbd>
               </div>
-              <span className="text-[10px] text-emerald-800 font-semibold">AyurSimilarity Engine</span>
+              <span className="text-[10px] text-amber-900 font-bold">AyurSimilarity Engine</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modern Enterprise Sidebar */}
-      <aside
-        style={{ width: sidebarWidth }}
-        className="fixed inset-y-0 left-0 z-30 flex flex-col bg-slate-900 text-slate-300 border-r border-slate-800 transition-all duration-200 overflow-hidden select-none"
-      >
-        {/* Brand Header */}
-        <div className="flex items-center justify-between px-4 h-16 border-b border-slate-800 shrink-0">
-          {!collapsed && (
-            <div className="flex items-center gap-2.5 truncate">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm shadow-sm">
-                AY
-              </div>
-              <div className="truncate">
-                <div className="text-xs font-bold tracking-tight text-white uppercase leading-tight">
-                  AyurSimilarity
-                </div>
-                <div className="text-[10px] text-slate-400 font-medium leading-none">
-                  Distance Benchmark
-                </div>
-              </div>
-            </div>
-          )}
-
-          {collapsed && (
-            <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm shadow-sm">
-              AY
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            aria-label="Toggle sidebar"
-            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white transition"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path
-                d={collapsed ? "M6 4l4 4-4 4" : "M10 12L6 8l4-4"}
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* Navigation Sections */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5" aria-label="Primary navigation">
-          {NAV_SECTIONS.map((sec) => (
-            <div key={sec.title} className="space-y-1">
-              {!collapsed && (
-                <div className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                  {sec.title}
-                </div>
-              )}
-              {sec.items.map((p) => {
-                const Icon = p.icon;
-                const active = currentPath === p.path;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => navigate(p.path)}
-                    title={collapsed ? p.label : undefined}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition w-full text-left ${
-                      active
-                        ? 'bg-emerald-600/90 text-white shadow-xs font-semibold'
-                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                    }`}
-                  >
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'} ${collapsed ? 'mx-auto' : ''}`} />
-                    {!collapsed && <span className="truncate">{p.label}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        {/* Disclaimer Card at Sidebar Bottom */}
-        {!collapsed && (
-          <div className="p-3 border-t border-slate-800 shrink-0 bg-slate-950/40">
-            <p className="text-[10px] leading-relaxed text-slate-400">
-              Research prototype on a dataset of unverified origin. Not a diagnostic tool.
-            </p>
-          </div>
-        )}
-      </aside>
-
-      {/* Main Content Viewport */}
-      <div
-        style={{ marginLeft: sidebarWidth }}
-        className="transition-all duration-200 flex-1 pt-16 min-h-screen flex flex-col"
-      >
-        <main className="mx-auto w-full max-w-7xl px-6 py-7 flex-1">
+      {/* Main Full-Width Content Viewport (Zero Left Sidebar Margin) */}
+      <div className="flex-1 w-full min-h-screen flex flex-col">
+        <main className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex-1">
           {/* Clinical Breadcrumb Trail */}
-          <nav aria-label="Breadcrumbs" className="mb-6 flex items-center justify-between text-xs text-slate-500 border-b border-slate-200/60 pb-3">
+          <nav aria-label="Breadcrumbs" className="mb-5 flex items-center justify-between text-xs text-[#786655] border-b border-[#e5dcce] pb-3">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/overview')}
-                className="font-medium text-slate-500 hover:text-emerald-700 transition"
+                className="font-medium text-[#786655] hover:text-[#2b221a] transition"
               >
                 AyurSimilarity Portal
               </button>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="font-medium text-slate-500">
+              <ChevronRight className="h-3.5 w-3.5 text-[#b09e8c] shrink-0" />
+              <span className="font-medium text-[#786655]">
                 {activeNavItem?.section || 'Research Analytics'}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="font-semibold text-emerald-900 bg-emerald-50/90 border border-emerald-200/80 rounded-md px-2 py-0.5 shadow-2xs">
+              <ChevronRight className="h-3.5 w-3.5 text-[#b09e8c] shrink-0" />
+              <span className="font-semibold text-[#2b221a] bg-white/80 border border-[#dfd3c3] rounded-full px-2.5 py-0.5 shadow-2xs">
                 {activeNavItem?.label || 'Overview'}
               </span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-3 text-[11px] text-slate-400">
+            <div className="hidden sm:flex items-center gap-3 text-[11px] text-[#786655]">
               <span className="flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
                 Verified Cohort Mode
               </span>
               <span>·</span>
@@ -538,6 +487,21 @@ function AppLayout({ state }) {
             </Routes>
           )}
         </main>
+
+        {/* Global Research Prototype Footer (Rule R11) */}
+        <footer className="w-full border-t border-[#e2d5c3]/80 bg-[#faf7f2]/90 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 mt-auto">
+          <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#786655]">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-amber-600" />
+              <span>AyurSimilarity Research Platform</span>
+              <span className="text-[#c7b7a5]">·</span>
+              <span>Categorical Parity Benchmark</span>
+            </div>
+            <p className="text-[11px] text-[#857362] text-center sm:text-right">
+              Research prototype on a dataset of unverified origin. Not a diagnostic tool.
+            </p>
+          </div>
+        </footer>
       </div>
     </div>
   );
